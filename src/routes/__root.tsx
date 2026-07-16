@@ -118,7 +118,6 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
-    const { supabase } = require("@/integrations/supabase/client");
     const { data: sub } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
         router.invalidate();
