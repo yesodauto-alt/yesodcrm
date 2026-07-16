@@ -1,68 +1,22 @@
-# CRM Yesod – MVP integrado ao n8n
+## Plano para destravar seu acesso
 
-## Observação sobre stack
-O projeto Lovable roda em **TanStack Start + React + TypeScript + Tailwind + Shadcn UI**, não Next.js. A arquitetura é equivalente (SSR, file-based routing, server functions, API routes). Vou usar essa stack + **Lovable Cloud** (Supabase gerenciado) para Auth + Database + Storage. Todo o resto do escopo é atendido.
+Como você já confirmou o email, o problema pode estar em uma destas três frentes: confirmação não registrada no backend, redirecionamento/sessão após confirmação, ou tela de login tratando o erro de forma confusa.
 
-## Escopo desta entrega (1 execução)
+## O que vou verificar e ajustar
 
-### Backend (Lovable Cloud / Supabase)
-Tabelas:
-- `leads` — id, nome, empresa, cargo, email, telefone, whatsapp, origem, status (enum), responsavel, valor, tags (text[]), observacoes, created_at, updated_at
-- `lead_history` — id, lead_id, tipo (status_change|note|update|created), descricao, usuario, created_at
-- `user_roles` + enum `app_role` (admin) + função `has_role` (base para multiusuário futuro)
-- Trigger: ao mudar `status` em `leads`, insere linha em `lead_history` automaticamente
-- RLS: usuários autenticados leem/escrevem; policies preparadas para roles
-- GRANTs corretos em `public.*`
+1. **Conferir o estado real do login**
+   - Revisar os logs mais recentes de autenticação para ver se o erro ainda é `Email not confirmed`, `Invalid credentials`, bloqueio por limite de envio, ou outro erro.
+   - Validar se a confirmação do email foi registrada para essa conta.
 
-Enum de status: `novo | contato | diagnostico | proposta | negociacao | ganho | perdido`
+2. **Corrigir o fluxo conforme o erro encontrado**
+   - Se o backend ainda marcar como não confirmado: liberar o fluxo de teste do MVP ou ajustar o reenvio/confirmação.
+   - Se o email já estiver confirmado: corrigir o redirecionamento pós-login para levar ao dashboard.
+   - Se o login funcionar mas a área interna bloquear: corrigir a criação automática de perfil/permissão, porque o projeto tem a função de criar usuário, mas os dados mostram que o gatilho de criação automática pode não estar ativo.
 
-### Endpoints públicos para o n8n (`/api/public/*`, protegidos por header `x-webhook-secret`)
-- `POST /api/public/webhooks/new-lead` — cria lead
-- `POST /api/public/webhooks/update-lead` — atualiza por id ou email
-- `GET  /api/public/leads` — lista (com filtros básicos)
-- `PATCH /api/public/leads/$id/status` — muda status
-- `POST /api/public/leads/$id/note` — adiciona observação no histórico
+3. **Melhorar mensagens na tela de acesso**
+   - Mostrar mensagens claras em português para: email não confirmado, credenciais inválidas, limite de tentativas, cadastro já existente e sucesso de cadastro.
 
-Secret `N8N_WEBHOOK_SECRET` armazenado via Cloud secrets. Validação com Zod. Uso de `supabaseAdmin` apenas após verificar o header.
-
-### Server functions (uso interno autenticado)
-- `listLeads({ search, status, page })`
-- `getLead(id)` com histórico
-- `createLead`, `updateLead`, `updateLeadStatus`, `addNote`
-- `dashboardStats()` — contagens por status + últimos leads
-
-### Frontend (rotas sob `_authenticated/`)
-- `/auth` — login Supabase (email/senha + Google)
-- `/` (redireciona para `/dashboard` autenticado, senão `/auth`)
-- `/dashboard` — cards de KPIs (Total, Novos, Em Atendimento, Propostas, Ganhos, Perdidos), últimos leads, gráfico de barras por status (recharts)
-- `/leads` — tabela com busca, filtro por status, ordenação, paginação; clique abre **Drawer** com detalhes + form de edição + timeline do histórico + adicionar observação
-- `/leads/new` — modal/página com form completo de cadastro
-- `/pipeline` — Kanban com 7 colunas, drag-and-drop (@dnd-kit) atualizando status no banco
-- `/settings` — placeholder com webhook URLs e secret info
-- `/profile` — dados do usuário logado + logout
-
-### Layout & UI
-- Sidebar Shadcn colapsável (Dashboard, Leads, Pipeline, Configurações, Perfil)
-- Header com busca global (nome/empresa/email/telefone) → resultados em popover levando ao lead
-- Toggle claro/escuro
-- Componentes Shadcn: Table, Drawer/Sheet, Dialog, Badge, Card, Input, Select, Tabs, Button
-- Design system semântico via tokens em `styles.css` (sem cores hardcoded)
-
-### Arquitetura preparada para o futuro
-- Estrutura de módulos por domínio (`src/features/leads`, `src/features/pipeline`, `src/features/dashboard`)
-- Camada `src/lib/*.functions.ts` para server functions reutilizáveis
-- Enum de status e tipos centralizados em `src/lib/types.ts`
-- Endpoints `/api/public/*` com padrão de assinatura para adicionar novos webhooks sem refatorar
-
-## Fora deste MVP (conforme pedido)
-Agenda, tarefas, empresas, contatos, propostas, WhatsApp, Calendar, Gmail, assinatura, IA, multiusuário/permissões avançadas, notificações.
-
-## Detalhes técnicos
-- Auth: email/senha + Google (Lovable Cloud broker). Primeiro usuário criado recebe role `admin` via trigger.
-- Rotas autenticadas sob `_authenticated/` (gate gerenciado). Rotas públicas: `/auth`, `/api/public/*`.
-- Queries via TanStack Query + `useSuspenseQuery` no padrão do template.
-- Drag-and-drop: `@dnd-kit/core` + `@dnd-kit/sortable`.
-- Gráficos: `recharts` (já comum no template shadcn).
-- Todas as mutações registram entrada em `lead_history`.
-
-Após aprovação implemento tudo em uma única execução.
+4. **Validar o caminho completo**
+   - Entrar com uma conta confirmada.
+   - Confirmar acesso ao dashboard.
+   - Confirmar que a navegação para Leads/Pipeline funciona sem bloquear.
