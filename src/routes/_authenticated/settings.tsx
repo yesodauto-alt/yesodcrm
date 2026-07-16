@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Configurações — Yesod CRM" }] }),
@@ -10,7 +11,10 @@ export const Route = createFileRoute("/_authenticated/settings")({
 });
 
 function Settings() {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const [origin, setOrigin] = useState("");
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
   const endpoints = [
     { m: "POST", path: "/api/public/webhooks/new-lead", desc: "Criar lead a partir do n8n" },
     { m: "POST", path: "/api/public/webhooks/update-lead", desc: "Atualizar lead por id ou email" },

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
@@ -24,39 +24,79 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
+      if (data.session) navigate({ to: "/dashboard", replace: true });
     });
   }, [navigate]);
 
-  async function signIn(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    navigate({ to: "/dashboard" });
+  function authMessage(message: string) {
+    const normalized = message.toLowerCase();
+    if (normalized.includes("email not confirmed")) {
+      return "Seu email ainda não foi confirmado. Abra o link de confirmação enviado para seu email e tente entrar novamente.";
+    }
+    if (normalized.includes("invalid login credentials")) {
+      return "Email ou senha incorretos. Confira os dados e tente novamente.";
+    }
+    if (normalized.includes("for security purposes") || normalized.includes("rate limit")) {
+      return "Muitas tentativas em pouco tempo. Aguarde alguns instantes e tente novamente.";
+    }
+    if (normalized.includes("already registered") || normalized.includes("user already registered")) {
+      return "Este email já tem cadastro. Use a aba Entrar para acessar.";
+    }
+    if (normalized.includes("weak password") || normalized.includes("password is known")) {
+      return "Use uma senha mais forte e que não seja comum ou vazada.";
+    }
+    return message;
   }
 
-  async function signUp(e: React.FormEvent) {
+  async function signIn(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { full_name: name },
-      },
-    });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Conta criada! Verifique seu email se necessário.");
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) {
+        toast.error(authMessage(error.message));
+        return;
+      }
+      toast.success("Login realizado");
+      await navigate({ to: "/dashboard", replace: true });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function signUp(e: FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: { full_name: name.trim() },
+        },
+      });
+      if (error) {
+        toast.error(authMessage(error.message));
+        return;
+      }
+      if (data.session) {
+        toast.success("Conta criada");
+        await navigate({ to: "/dashboard", replace: true });
+        return;
+      }
+      toast.success("Conta criada. Confirme seu email e depois entre com sua senha.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function google() {
+    setLoading(true);
     const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    setLoading(false);
     if (result.error) toast.error(result.error.message);
-    if (!result.redirected && !result.error) navigate({ to: "/dashboard" });
+    if (!result.redirected && !result.error) navigate({ to: "/dashboard", replace: true });
   }
 
   return (
@@ -116,7 +156,7 @@ function AuthPage() {
               <span className="bg-card px-2 text-muted-foreground">ou</span>
             </div>
           </div>
-          <Button type="button" variant="outline" className="w-full" onClick={google}>
+          <Button type="button" variant="outline" className="w-full" onClick={google} disabled={loading}>
             Entrar com Google
           </Button>
         </CardContent>
