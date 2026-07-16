@@ -13,11 +13,18 @@ const schema = z.object({
     telefone: z.string().nullable().optional(),
     whatsapp: z.string().nullable().optional(),
     origem: z.string().nullable().optional(),
+    unidade: z.string().nullable().optional(),
+    interesse: z.string().nullable().optional(),
+    objetivo: z.string().nullable().optional(),
     status: z.enum(LEAD_STATUSES).optional(),
     responsavel: z.string().nullable().optional(),
     valor: z.number().nullable().optional(),
     tags: z.array(z.string()).optional(),
     observacoes: z.string().nullable().optional(),
+    conversation_summary: z.string().nullable().optional(),
+    conversation_summary_updated_at: z.string().nullable().optional(),
+    conversation_next_action: z.string().nullable().optional(),
+    conversation_notes: z.string().nullable().optional(),
   }),
 });
 
