@@ -97,7 +97,7 @@ export const updateLead = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { id, ...patch } = data;
-    const updatePayload: Record<string, unknown> = { ...patch, email: clean(patch.email) };
+    const updatePayload: any = { ...patch, email: clean(patch.email) };
     if (patch.conversation_summary !== undefined) {
       updatePayload.conversation_summary_updated_at = new Date().toISOString();
     }
