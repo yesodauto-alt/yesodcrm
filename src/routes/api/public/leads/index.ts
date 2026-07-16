@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/public/leads/")({
         const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         let q = supabaseAdmin.from("leads").select("*").order("created_at", { ascending: false }).limit(limit);
-        if (status) q = q.eq("status", status);
+        if (status) q = q.eq("status", status as any);
         const { data, error } = await q;
         if (error) return Response.json({ error: error.message }, { status: 500 });
         return Response.json({ leads: data ?? [] });

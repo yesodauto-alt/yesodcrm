@@ -9,38 +9,204 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
+import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as ApiPublicLeadsIndexRouteImport } from './routes/api/public/leads/index'
+import { Route as ApiPublicWebhooksUpdateLeadRouteImport } from './routes/api/public/webhooks/update-lead'
+import { Route as ApiPublicWebhooksNewLeadRouteImport } from './routes/api/public/webhooks/new-lead'
+import { Route as ApiPublicLeadsIdStatusRouteImport } from './routes/api/public/leads/$id/status'
+import { Route as ApiPublicLeadsIdNoteRouteImport } from './routes/api/public/leads/$id/note'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPipelineRoute = AuthenticatedPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLeadsRoute = AuthenticatedLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicLeadsIndexRoute = ApiPublicLeadsIndexRouteImport.update({
+  id: '/api/public/leads/',
+  path: '/api/public/leads/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWebhooksUpdateLeadRoute =
+  ApiPublicWebhooksUpdateLeadRouteImport.update({
+    id: '/api/public/webhooks/update-lead',
+    path: '/api/public/webhooks/update-lead',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicWebhooksNewLeadRoute =
+  ApiPublicWebhooksNewLeadRouteImport.update({
+    id: '/api/public/webhooks/new-lead',
+    path: '/api/public/webhooks/new-lead',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicLeadsIdStatusRoute = ApiPublicLeadsIdStatusRouteImport.update({
+  id: '/api/public/leads/$id/status',
+  path: '/api/public/leads/$id/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicLeadsIdNoteRoute = ApiPublicLeadsIdNoteRouteImport.update({
+  id: '/api/public/leads/$id/note',
+  path: '/api/public/leads/$id/note',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/leads': typeof AuthenticatedLeadsRoute
+  '/pipeline': typeof AuthenticatedPipelineRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
+  '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
+  '/api/public/leads/': typeof ApiPublicLeadsIndexRoute
+  '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
+  '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/leads': typeof AuthenticatedLeadsRoute
+  '/pipeline': typeof AuthenticatedPipelineRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
+  '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
+  '/api/public/leads': typeof ApiPublicLeadsIndexRoute
+  '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
+  '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/leads': typeof AuthenticatedLeadsRoute
+  '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
+  '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
+  '/api/public/leads/': typeof ApiPublicLeadsIndexRoute
+  '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
+  '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/leads'
+    | '/pipeline'
+    | '/profile'
+    | '/settings'
+    | '/api/public/webhooks/new-lead'
+    | '/api/public/webhooks/update-lead'
+    | '/api/public/leads/'
+    | '/api/public/leads/$id/note'
+    | '/api/public/leads/$id/status'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/leads'
+    | '/pipeline'
+    | '/profile'
+    | '/settings'
+    | '/api/public/webhooks/new-lead'
+    | '/api/public/webhooks/update-lead'
+    | '/api/public/leads'
+    | '/api/public/leads/$id/note'
+    | '/api/public/leads/$id/status'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/leads'
+    | '/_authenticated/pipeline'
+    | '/_authenticated/profile'
+    | '/_authenticated/settings'
+    | '/api/public/webhooks/new-lead'
+    | '/api/public/webhooks/update-lead'
+    | '/api/public/leads/'
+    | '/api/public/leads/$id/note'
+    | '/api/public/leads/$id/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ApiPublicWebhooksNewLeadRoute: typeof ApiPublicWebhooksNewLeadRoute
+  ApiPublicWebhooksUpdateLeadRoute: typeof ApiPublicWebhooksUpdateLeadRoute
+  ApiPublicLeadsIndexRoute: typeof ApiPublicLeadsIndexRoute
+  ApiPublicLeadsIdNoteRoute: typeof ApiPublicLeadsIdNoteRoute
+  ApiPublicLeadsIdStatusRoute: typeof ApiPublicLeadsIdStatusRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +214,107 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pipeline': {
+      id: '/_authenticated/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof AuthenticatedPipelineRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/leads': {
+      id: '/_authenticated/leads'
+      path: '/leads'
+      fullPath: '/leads'
+      preLoaderRoute: typeof AuthenticatedLeadsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/leads/': {
+      id: '/api/public/leads/'
+      path: '/api/public/leads'
+      fullPath: '/api/public/leads/'
+      preLoaderRoute: typeof ApiPublicLeadsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/update-lead': {
+      id: '/api/public/webhooks/update-lead'
+      path: '/api/public/webhooks/update-lead'
+      fullPath: '/api/public/webhooks/update-lead'
+      preLoaderRoute: typeof ApiPublicWebhooksUpdateLeadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/new-lead': {
+      id: '/api/public/webhooks/new-lead'
+      path: '/api/public/webhooks/new-lead'
+      fullPath: '/api/public/webhooks/new-lead'
+      preLoaderRoute: typeof ApiPublicWebhooksNewLeadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/leads/$id/status': {
+      id: '/api/public/leads/$id/status'
+      path: '/api/public/leads/$id/status'
+      fullPath: '/api/public/leads/$id/status'
+      preLoaderRoute: typeof ApiPublicLeadsIdStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/leads/$id/note': {
+      id: '/api/public/leads/$id/note'
+      path: '/api/public/leads/$id/note'
+      fullPath: '/api/public/leads/$id/note'
+      preLoaderRoute: typeof ApiPublicLeadsIdNoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
+  AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
+  AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ApiPublicWebhooksNewLeadRoute: ApiPublicWebhooksNewLeadRoute,
+  ApiPublicWebhooksUpdateLeadRoute: ApiPublicWebhooksUpdateLeadRoute,
+  ApiPublicLeadsIndexRoute: ApiPublicLeadsIndexRoute,
+  ApiPublicLeadsIdNoteRoute: ApiPublicLeadsIdNoteRoute,
+  ApiPublicLeadsIdStatusRoute: ApiPublicLeadsIdStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

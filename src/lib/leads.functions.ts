@@ -18,8 +18,8 @@ const leadInputSchema = z.object({
   observacoes: z.string().nullish(),
 });
 
-function clean(v: unknown) {
-  return v === "" ? null : v;
+function clean<T>(v: T | "" | null | undefined): T | null {
+  return v === "" || v == null ? null : (v as T);
 }
 
 export const listLeads = createServerFn({ method: "POST" })
@@ -35,7 +35,7 @@ export const listLeads = createServerFn({ method: "POST" })
       .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(from, to);
-    if (data.status && data.status !== "all") query = query.eq("status", data.status);
+    if (data.status && data.status !== "all") query = query.eq("status", data.status as any);
     if (data.search) {
       const s = `%${data.search}%`;
       query = query.or(`nome.ilike.${s},empresa.ilike.${s},email.ilike.${s},telefone.ilike.${s},whatsapp.ilike.${s}`);
