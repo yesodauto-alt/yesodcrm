@@ -45,7 +45,11 @@ export const Route = createFileRoute("/api/public/webhooks/update-lead")({
           return Response.json({ error: "id_or_email_required" }, { status: 400 });
         }
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        let query = supabaseAdmin.from("leads").update(parsed.data.patch);
+        const patch: Record<string, unknown> = { ...parsed.data.patch };
+        if (patch.conversation_summary !== undefined && patch.conversation_summary_updated_at === undefined) {
+          patch.conversation_summary_updated_at = new Date().toISOString();
+        }
+        let query = supabaseAdmin.from("leads").update(patch as any);
         if (parsed.data.id) query = query.eq("id", parsed.data.id);
         else query = query.eq("email", parsed.data.email!);
         const { data, error } = await query.select();
