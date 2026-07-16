@@ -97,9 +97,13 @@ export const updateLead = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { id, ...patch } = data;
+    const updatePayload: Record<string, unknown> = { ...patch, email: clean(patch.email) };
+    if (patch.conversation_summary !== undefined) {
+      updatePayload.conversation_summary_updated_at = new Date().toISOString();
+    }
     const { data: row, error } = await context.supabase
       .from("leads")
-      .update({ ...patch, email: clean(patch.email) })
+      .update(updatePayload)
       .eq("id", id)
       .select()
       .single();
