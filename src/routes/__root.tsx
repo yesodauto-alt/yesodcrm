@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -121,14 +122,17 @@ function RootComponent() {
     const { data: sub } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
         router.invalidate();
+        if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+        if (event === "SIGNED_OUT") queryClient.clear();
       }
     });
     return () => sub.subscription.unsubscribe();
-  }, [router]);
+  }, [queryClient, router]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <Toaster richColors position="top-center" />
     </QueryClientProvider>
   );
 }
