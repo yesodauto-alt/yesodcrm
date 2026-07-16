@@ -58,54 +58,75 @@ export type Database = {
       leads: {
         Row: {
           cargo: string | null
+          conversation_next_action: string | null
+          conversation_notes: string | null
+          conversation_summary: string | null
+          conversation_summary_updated_at: string | null
           created_at: string
           created_by: string | null
           email: string | null
           empresa: string | null
           id: string
+          interesse: string | null
           nome: string
+          objetivo: string | null
           observacoes: string | null
           origem: string | null
           responsavel: string | null
           status: Database["public"]["Enums"]["lead_status"]
           tags: string[]
           telefone: string | null
+          unidade: string | null
           updated_at: string
           valor: number | null
           whatsapp: string | null
         }
         Insert: {
           cargo?: string | null
+          conversation_next_action?: string | null
+          conversation_notes?: string | null
+          conversation_summary?: string | null
+          conversation_summary_updated_at?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
           empresa?: string | null
           id?: string
+          interesse?: string | null
           nome: string
+          objetivo?: string | null
           observacoes?: string | null
           origem?: string | null
           responsavel?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           tags?: string[]
           telefone?: string | null
+          unidade?: string | null
           updated_at?: string
           valor?: number | null
           whatsapp?: string | null
         }
         Update: {
           cargo?: string | null
+          conversation_next_action?: string | null
+          conversation_notes?: string | null
+          conversation_summary?: string | null
+          conversation_summary_updated_at?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
           empresa?: string | null
           id?: string
+          interesse?: string | null
           nome?: string
+          objetivo?: string | null
           observacoes?: string | null
           origem?: string | null
           responsavel?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           tags?: string[]
           telefone?: string | null
+          unidade?: string | null
           updated_at?: string
           valor?: number | null
           whatsapp?: string | null
