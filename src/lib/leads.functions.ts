@@ -11,11 +11,17 @@ const leadInputSchema = z.object({
   telefone: z.string().nullish(),
   whatsapp: z.string().nullish(),
   origem: z.string().nullish(),
+  unidade: z.string().nullish(),
+  interesse: z.string().nullish(),
+  objetivo: z.string().nullish(),
   status: z.enum(LEAD_STATUSES).default("novo"),
   responsavel: z.string().nullish(),
   valor: z.number().nullish(),
   tags: z.array(z.string()).default([]),
   observacoes: z.string().nullish(),
+  conversation_summary: z.string().nullish(),
+  conversation_next_action: z.string().nullish(),
+  conversation_notes: z.string().nullish(),
 });
 
 function clean<T>(v: T | "" | null | undefined): T | null {
@@ -91,9 +97,13 @@ export const updateLead = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { id, ...patch } = data;
+    const updatePayload: any = { ...patch, email: clean(patch.email) };
+    if (patch.conversation_summary !== undefined) {
+      updatePayload.conversation_summary_updated_at = new Date().toISOString();
+    }
     const { data: row, error } = await context.supabase
       .from("leads")
-      .update({ ...patch, email: clean(patch.email) })
+      .update(updatePayload)
       .eq("id", id)
       .select()
       .single();

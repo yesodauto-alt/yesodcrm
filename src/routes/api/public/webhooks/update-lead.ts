@@ -13,11 +13,18 @@ const schema = z.object({
     telefone: z.string().nullable().optional(),
     whatsapp: z.string().nullable().optional(),
     origem: z.string().nullable().optional(),
+    unidade: z.string().nullable().optional(),
+    interesse: z.string().nullable().optional(),
+    objetivo: z.string().nullable().optional(),
     status: z.enum(LEAD_STATUSES).optional(),
     responsavel: z.string().nullable().optional(),
     valor: z.number().nullable().optional(),
     tags: z.array(z.string()).optional(),
     observacoes: z.string().nullable().optional(),
+    conversation_summary: z.string().nullable().optional(),
+    conversation_summary_updated_at: z.string().nullable().optional(),
+    conversation_next_action: z.string().nullable().optional(),
+    conversation_notes: z.string().nullable().optional(),
   }),
 });
 
@@ -38,7 +45,11 @@ export const Route = createFileRoute("/api/public/webhooks/update-lead")({
           return Response.json({ error: "id_or_email_required" }, { status: 400 });
         }
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        let query = supabaseAdmin.from("leads").update(parsed.data.patch);
+        const patch: Record<string, unknown> = { ...parsed.data.patch };
+        if (patch.conversation_summary !== undefined && patch.conversation_summary_updated_at === undefined) {
+          patch.conversation_summary_updated_at = new Date().toISOString();
+        }
+        let query = supabaseAdmin.from("leads").update(patch as any);
         if (parsed.data.id) query = query.eq("id", parsed.data.id);
         else query = query.eq("email", parsed.data.email!);
         const { data, error } = await query.select();
