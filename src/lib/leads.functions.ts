@@ -11,11 +11,17 @@ const leadInputSchema = z.object({
   telefone: z.string().nullish(),
   whatsapp: z.string().nullish(),
   origem: z.string().nullish(),
+  unidade: z.string().nullish(),
+  interesse: z.string().nullish(),
+  objetivo: z.string().nullish(),
   status: z.enum(LEAD_STATUSES).default("novo"),
   responsavel: z.string().nullish(),
   valor: z.number().nullish(),
   tags: z.array(z.string()).default([]),
   observacoes: z.string().nullish(),
+  conversation_summary: z.string().nullish(),
+  conversation_next_action: z.string().nullish(),
+  conversation_notes: z.string().nullish(),
 });
 
 function clean<T>(v: T | "" | null | undefined): T | null {
