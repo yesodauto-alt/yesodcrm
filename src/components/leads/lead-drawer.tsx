@@ -86,6 +86,9 @@ export function LeadDrawer({ id, open, onOpenChange }: { id: string | null; open
                 </Button>
               </div>
             </TabsContent>
+            <TabsContent value="tasks" className="mt-4">
+              <TaskList leadId={id} />
+            </TabsContent>
             <TabsContent value="history" className="mt-4 space-y-4">
               <div className="space-y-2">
                 <Textarea
