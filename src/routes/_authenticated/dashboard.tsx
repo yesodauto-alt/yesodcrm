@@ -2,12 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { dashboardStats } from "@/lib/leads.functions";
+import { taskStats } from "@/lib/tasks.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { STATUS_LABELS, STATUS_COLORS, LEAD_STATUSES } from "@/lib/types";
-import { Users, TrendingUp, Handshake, Trophy, XCircle, Sparkles } from "lucide-react";
+import { STATUS_LABELS, STATUS_COLORS, LEAD_STATUSES, TASK_STATUS_LABELS, TASK_PRIORITY_COLORS, TASK_PRIORITY_LABELS } from "@/lib/types";
+import { Users, TrendingUp, Handshake, Trophy, XCircle, Sparkles, ListTodo, AlertTriangle, Clock } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -17,7 +18,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const fetchStats = useServerFn(dashboardStats);
+  const fetchTaskStats = useServerFn(taskStats);
   const { data } = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats() });
+  const { data: tstats } = useQuery({ queryKey: ["task-stats"], queryFn: () => fetchTaskStats() });
 
   const kpis = [
     { label: "Total de Leads", value: data?.total ?? 0, icon: Users, color: "text-foreground" },
