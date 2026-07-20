@@ -30,29 +30,6 @@ export const STATUS_COLORS: Record<LeadStatus, string> = {
   perdido: "bg-rose-500/10 text-rose-500 border-rose-500/20",
 };
 
-export const UNIDADE_OPTIONS = ["Matriz", "Unidade A", "Unidade B"] as const;
-
-export const ORIGEM_OPTIONS = [
-  "WhatsApp",
-  "Instagram",
-  "Facebook",
-  "Site",
-  "Google",
-  "Indicação",
-  "Evento",
-  "Outro",
-] as const;
-
-export const INTERESSE_OPTIONS = [
-  "Automação",
-  "Dashboard",
-  "Integração",
-  "Consultoria",
-  "IA",
-  "Desenvolvimento",
-  "Outro",
-] as const;
-
 export interface Lead {
   id: string;
   nome: string;
@@ -82,9 +59,96 @@ export interface Lead {
 export interface LeadHistoryEntry {
   id: string;
   lead_id: string;
-  tipo: "created" | "status_change" | "note" | "update";
+  tipo:
+    | "created"
+    | "status_change"
+    | "note"
+    | "update"
+    | "task_created"
+    | "task_updated"
+    | "task_completed"
+    | "task_cancelled";
   descricao: string | null;
   usuario: string | null;
   user_id: string | null;
   created_at: string;
+}
+
+// ================= Contacts =================
+
+export interface Contact {
+  id: string;
+  nome: string;
+  empresa: string | null;
+  cargo: string | null;
+  email: string | null;
+  telefone: string | null;
+  whatsapp: string | null;
+  unidade: string | null;
+  origem: string | null;
+  interesse: string | null;
+  objetivo: string | null;
+  tags: string[];
+  observacoes: string | null;
+  lead_id: string | null;
+  empresa_id: string | null;
+  oportunidade_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ================= Tasks =================
+
+export const TASK_STATUSES = ["pendente", "em_andamento", "concluida", "cancelada"] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  pendente: "Pendente",
+  em_andamento: "Em andamento",
+  concluida: "Concluída",
+  cancelada: "Cancelada",
+};
+
+export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
+  pendente: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  em_andamento: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  concluida: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  cancelada: "bg-muted text-muted-foreground border-muted",
+};
+
+export const TASK_PRIORITIES = ["baixa", "media", "alta"] as const;
+export type TaskPriority = (typeof TASK_PRIORITIES)[number];
+
+export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
+  baixa: "Baixa",
+  media: "Média",
+  alta: "Alta",
+};
+
+export const TASK_PRIORITY_COLORS: Record<TaskPriority, string> = {
+  baixa: "bg-slate-500/10 text-slate-500 border-slate-500/20",
+  media: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+  alta: "bg-rose-500/10 text-rose-500 border-rose-500/20",
+};
+
+export interface Task {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  due_date: string | null;
+  status: TaskStatus;
+  prioridade: TaskPriority;
+  responsavel_id: string | null;
+  responsavel_nome: string | null;
+  equipe: string | null;
+  lead_id: string | null;
+  contact_id: string | null;
+  empresa_id: string | null;
+  oportunidade_id: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }

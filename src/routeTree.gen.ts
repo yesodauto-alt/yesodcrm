@@ -17,9 +17,14 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
 import { Route as ApiPublicLeadsIndexRouteImport } from './routes/api/public/leads/index'
+import { Route as ApiPublicWebhooksUpdateTaskRouteImport } from './routes/api/public/webhooks/update-task'
 import { Route as ApiPublicWebhooksUpdateLeadRouteImport } from './routes/api/public/webhooks/update-lead'
+import { Route as ApiPublicWebhooksUpdateContactRouteImport } from './routes/api/public/webhooks/update-contact'
+import { Route as ApiPublicWebhooksNewTaskRouteImport } from './routes/api/public/webhooks/new-task'
 import { Route as ApiPublicWebhooksNewLeadRouteImport } from './routes/api/public/webhooks/new-lead'
+import { Route as ApiPublicWebhooksNewContactRouteImport } from './routes/api/public/webhooks/new-contact'
 import { Route as ApiPublicLeadsIdStatusRouteImport } from './routes/api/public/leads/$id/status'
 import { Route as ApiPublicLeadsIdNoteRouteImport } from './routes/api/public/leads/$id/note'
 
@@ -62,21 +67,50 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicLeadsIndexRoute = ApiPublicLeadsIndexRouteImport.update({
   id: '/api/public/leads/',
   path: '/api/public/leads/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWebhooksUpdateTaskRoute =
+  ApiPublicWebhooksUpdateTaskRouteImport.update({
+    id: '/api/public/webhooks/update-task',
+    path: '/api/public/webhooks/update-task',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhooksUpdateLeadRoute =
   ApiPublicWebhooksUpdateLeadRouteImport.update({
     id: '/api/public/webhooks/update-lead',
     path: '/api/public/webhooks/update-lead',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicWebhooksUpdateContactRoute =
+  ApiPublicWebhooksUpdateContactRouteImport.update({
+    id: '/api/public/webhooks/update-contact',
+    path: '/api/public/webhooks/update-contact',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicWebhooksNewTaskRoute =
+  ApiPublicWebhooksNewTaskRouteImport.update({
+    id: '/api/public/webhooks/new-task',
+    path: '/api/public/webhooks/new-task',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhooksNewLeadRoute =
   ApiPublicWebhooksNewLeadRouteImport.update({
     id: '/api/public/webhooks/new-lead',
     path: '/api/public/webhooks/new-lead',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicWebhooksNewContactRoute =
+  ApiPublicWebhooksNewContactRouteImport.update({
+    id: '/api/public/webhooks/new-contact',
+    path: '/api/public/webhooks/new-contact',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicLeadsIdStatusRoute = ApiPublicLeadsIdStatusRouteImport.update({
@@ -93,13 +127,18 @@ const ApiPublicLeadsIdNoteRoute = ApiPublicLeadsIdNoteRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
+  '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
+  '/api/public/webhooks/update-contact': typeof ApiPublicWebhooksUpdateContactRoute
   '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
+  '/api/public/webhooks/update-task': typeof ApiPublicWebhooksUpdateTaskRoute
   '/api/public/leads/': typeof ApiPublicLeadsIndexRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
@@ -107,13 +146,18 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
+  '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
+  '/api/public/webhooks/update-contact': typeof ApiPublicWebhooksUpdateContactRoute
   '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
+  '/api/public/webhooks/update-task': typeof ApiPublicWebhooksUpdateTaskRoute
   '/api/public/leads': typeof ApiPublicLeadsIndexRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
@@ -123,13 +167,18 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
   '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
+  '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
+  '/api/public/webhooks/update-contact': typeof ApiPublicWebhooksUpdateContactRoute
   '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
+  '/api/public/webhooks/update-task': typeof ApiPublicWebhooksUpdateTaskRoute
   '/api/public/leads/': typeof ApiPublicLeadsIndexRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
@@ -139,13 +188,18 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/contacts'
     | '/dashboard'
     | '/leads'
     | '/pipeline'
     | '/profile'
     | '/settings'
+    | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
+    | '/api/public/webhooks/new-task'
+    | '/api/public/webhooks/update-contact'
     | '/api/public/webhooks/update-lead'
+    | '/api/public/webhooks/update-task'
     | '/api/public/leads/'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
@@ -153,13 +207,18 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/contacts'
     | '/dashboard'
     | '/leads'
     | '/pipeline'
     | '/profile'
     | '/settings'
+    | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
+    | '/api/public/webhooks/new-task'
+    | '/api/public/webhooks/update-contact'
     | '/api/public/webhooks/update-lead'
+    | '/api/public/webhooks/update-task'
     | '/api/public/leads'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
@@ -168,13 +227,18 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/contacts'
     | '/_authenticated/dashboard'
     | '/_authenticated/leads'
     | '/_authenticated/pipeline'
     | '/_authenticated/profile'
     | '/_authenticated/settings'
+    | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
+    | '/api/public/webhooks/new-task'
+    | '/api/public/webhooks/update-contact'
     | '/api/public/webhooks/update-lead'
+    | '/api/public/webhooks/update-task'
     | '/api/public/leads/'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
@@ -184,8 +248,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicWebhooksNewContactRoute: typeof ApiPublicWebhooksNewContactRoute
   ApiPublicWebhooksNewLeadRoute: typeof ApiPublicWebhooksNewLeadRoute
+  ApiPublicWebhooksNewTaskRoute: typeof ApiPublicWebhooksNewTaskRoute
+  ApiPublicWebhooksUpdateContactRoute: typeof ApiPublicWebhooksUpdateContactRoute
   ApiPublicWebhooksUpdateLeadRoute: typeof ApiPublicWebhooksUpdateLeadRoute
+  ApiPublicWebhooksUpdateTaskRoute: typeof ApiPublicWebhooksUpdateTaskRoute
   ApiPublicLeadsIndexRoute: typeof ApiPublicLeadsIndexRoute
   ApiPublicLeadsIdNoteRoute: typeof ApiPublicLeadsIdNoteRoute
   ApiPublicLeadsIdStatusRoute: typeof ApiPublicLeadsIdStatusRoute
@@ -249,11 +317,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/contacts': {
+      id: '/_authenticated/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof AuthenticatedContactsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/leads/': {
       id: '/api/public/leads/'
       path: '/api/public/leads'
       fullPath: '/api/public/leads/'
       preLoaderRoute: typeof ApiPublicLeadsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/update-task': {
+      id: '/api/public/webhooks/update-task'
+      path: '/api/public/webhooks/update-task'
+      fullPath: '/api/public/webhooks/update-task'
+      preLoaderRoute: typeof ApiPublicWebhooksUpdateTaskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/update-lead': {
@@ -263,11 +345,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksUpdateLeadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhooks/update-contact': {
+      id: '/api/public/webhooks/update-contact'
+      path: '/api/public/webhooks/update-contact'
+      fullPath: '/api/public/webhooks/update-contact'
+      preLoaderRoute: typeof ApiPublicWebhooksUpdateContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/new-task': {
+      id: '/api/public/webhooks/new-task'
+      path: '/api/public/webhooks/new-task'
+      fullPath: '/api/public/webhooks/new-task'
+      preLoaderRoute: typeof ApiPublicWebhooksNewTaskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/new-lead': {
       id: '/api/public/webhooks/new-lead'
       path: '/api/public/webhooks/new-lead'
       fullPath: '/api/public/webhooks/new-lead'
       preLoaderRoute: typeof ApiPublicWebhooksNewLeadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/new-contact': {
+      id: '/api/public/webhooks/new-contact'
+      path: '/api/public/webhooks/new-contact'
+      fullPath: '/api/public/webhooks/new-contact'
+      preLoaderRoute: typeof ApiPublicWebhooksNewContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/leads/$id/status': {
@@ -288,6 +391,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
   AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
@@ -296,6 +400,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
   AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
@@ -310,8 +415,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicWebhooksNewContactRoute: ApiPublicWebhooksNewContactRoute,
   ApiPublicWebhooksNewLeadRoute: ApiPublicWebhooksNewLeadRoute,
+  ApiPublicWebhooksNewTaskRoute: ApiPublicWebhooksNewTaskRoute,
+  ApiPublicWebhooksUpdateContactRoute: ApiPublicWebhooksUpdateContactRoute,
   ApiPublicWebhooksUpdateLeadRoute: ApiPublicWebhooksUpdateLeadRoute,
+  ApiPublicWebhooksUpdateTaskRoute: ApiPublicWebhooksUpdateTaskRoute,
   ApiPublicLeadsIndexRoute: ApiPublicLeadsIndexRoute,
   ApiPublicLeadsIdNoteRoute: ApiPublicLeadsIdNoteRoute,
   ApiPublicLeadsIdStatusRoute: ApiPublicLeadsIdStatusRoute,

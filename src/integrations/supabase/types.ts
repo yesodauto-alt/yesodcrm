@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      contacts: {
+        Row: {
+          cargo: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          empresa: string | null
+          empresa_id: string | null
+          id: string
+          interesse: string | null
+          lead_id: string | null
+          nome: string
+          objetivo: string | null
+          observacoes: string | null
+          oportunidade_id: string | null
+          origem: string | null
+          tags: string[]
+          telefone: string | null
+          unidade: string | null
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          empresa?: string | null
+          empresa_id?: string | null
+          id?: string
+          interesse?: string | null
+          lead_id?: string | null
+          nome: string
+          objetivo?: string | null
+          observacoes?: string | null
+          oportunidade_id?: string | null
+          origem?: string | null
+          tags?: string[]
+          telefone?: string | null
+          unidade?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          empresa?: string | null
+          empresa_id?: string | null
+          id?: string
+          interesse?: string | null
+          lead_id?: string | null
+          nome?: string
+          objetivo?: string | null
+          observacoes?: string | null
+          oportunidade_id?: string | null
+          origem?: string | null
+          tags?: string[]
+          telefone?: string | null
+          unidade?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_history: {
         Row: {
           created_at: string
@@ -157,6 +231,84 @@ export type Database = {
         }
         Relationships: []
       }
+      tasks: {
+        Row: {
+          cancelled_at: string | null
+          completed_at: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          due_date: string | null
+          empresa_id: string | null
+          equipe: string | null
+          id: string
+          lead_id: string | null
+          oportunidade_id: string | null
+          prioridade: Database["public"]["Enums"]["task_priority"]
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          due_date?: string | null
+          empresa_id?: string | null
+          equipe?: string | null
+          id?: string
+          lead_id?: string | null
+          oportunidade_id?: string | null
+          prioridade?: Database["public"]["Enums"]["task_priority"]
+          responsavel_id?: string | null
+          responsavel_nome?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          due_date?: string | null
+          empresa_id?: string | null
+          equipe?: string | null
+          id?: string
+          lead_id?: string | null
+          oportunidade_id?: string | null
+          prioridade?: Database["public"]["Enums"]["task_priority"]
+          responsavel_id?: string | null
+          responsavel_nome?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -190,7 +342,15 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "member"
-      history_type: "created" | "status_change" | "note" | "update"
+      history_type:
+        | "created"
+        | "status_change"
+        | "note"
+        | "update"
+        | "task_created"
+        | "task_updated"
+        | "task_completed"
+        | "task_cancelled"
       lead_status:
         | "novo"
         | "contato"
@@ -199,6 +359,8 @@ export type Database = {
         | "negociacao"
         | "ganho"
         | "perdido"
+      task_priority: "baixa" | "media" | "alta"
+      task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -327,7 +489,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "member"],
-      history_type: ["created", "status_change", "note", "update"],
+      history_type: [
+        "created",
+        "status_change",
+        "note",
+        "update",
+        "task_created",
+        "task_updated",
+        "task_completed",
+        "task_cancelled",
+      ],
       lead_status: [
         "novo",
         "contato",
@@ -337,6 +508,8 @@ export const Constants = {
         "ganho",
         "perdido",
       ],
+      task_priority: ["baixa", "media", "alta"],
+      task_status: ["pendente", "em_andamento", "concluida", "cancelada"],
     },
   },
 } as const

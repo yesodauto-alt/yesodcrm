@@ -2,12 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { dashboardStats } from "@/lib/leads.functions";
+import { taskStats } from "@/lib/tasks.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { STATUS_LABELS, STATUS_COLORS, LEAD_STATUSES } from "@/lib/types";
-import { Users, TrendingUp, Handshake, Trophy, XCircle, Sparkles } from "lucide-react";
+import { STATUS_LABELS, STATUS_COLORS, LEAD_STATUSES, TASK_STATUS_LABELS, TASK_PRIORITY_COLORS, TASK_PRIORITY_LABELS } from "@/lib/types";
+import { Users, TrendingUp, Handshake, Trophy, XCircle, Sparkles, ListTodo, AlertTriangle, Clock } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -17,7 +18,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const fetchStats = useServerFn(dashboardStats);
+  const fetchTaskStats = useServerFn(taskStats);
   const { data } = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats() });
+  const { data: tstats } = useQuery({ queryKey: ["task-stats"], queryFn: () => fetchTaskStats() });
 
   const kpis = [
     { label: "Total de Leads", value: data?.total ?? 0, icon: Users, color: "text-foreground" },
@@ -94,6 +97,50 @@ function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-1">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><ListTodo className="h-4 w-4" />Tarefas</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            <Row label="Total" value={tstats?.total ?? 0} />
+            <Row label="Pendentes" value={tstats?.byStatus?.pendente ?? 0} />
+            <Row label="Em andamento" value={tstats?.byStatus?.em_andamento ?? 0} />
+            <Row label="Concluídas" value={tstats?.byStatus?.concluida ?? 0} />
+            <Row label="Atrasadas" value={tstats?.atrasadas ?? 0} icon={<AlertTriangle className="h-3.5 w-3.5 text-rose-500" />} />
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-2">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" />Próximas atividades</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {(tstats?.upcoming ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhuma tarefa agendada.</p>
+            )}
+            {(tstats?.upcoming ?? []).map((t: any) => (
+              <div key={t.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{t.titulo}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {format(new Date(t.due_date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    {t.responsavel_nome ? ` · ${t.responsavel_nome}` : ""}
+                  </div>
+                </div>
+                <Badge variant="outline" className={TASK_PRIORITY_COLORS[t.prioridade as keyof typeof TASK_PRIORITY_COLORS]}>
+                  {TASK_PRIORITY_LABELS[t.prioridade as keyof typeof TASK_PRIORITY_LABELS]}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value, icon }: { label: string; value: number; icon?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-muted-foreground flex items-center gap-1.5">{icon}{label}</span>
+      <span className="font-semibold">{value}</span>
     </div>
   );
 }
