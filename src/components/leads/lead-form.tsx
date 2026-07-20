@@ -9,9 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   LEAD_STATUSES,
   STATUS_LABELS,
-  UNIDADE_OPTIONS,
-  ORIGEM_OPTIONS,
-  INTERESSE_OPTIONS,
   type Lead,
   type LeadStatus,
 } from "@/lib/types";
