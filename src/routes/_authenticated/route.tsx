@@ -13,7 +13,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, KanbanSquare, Settings, User, LogOut, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, Users, KanbanSquare, Settings, User, LogOut, Moon, Sun, Contact } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { GlobalSearch } from "@/components/global-search";
@@ -32,6 +32,7 @@ export const Route = createFileRoute("/_authenticated")({
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Leads", url: "/leads", icon: Users },
+  { title: "Contatos", url: "/contacts", icon: Contact },
   { title: "Pipeline", url: "/pipeline", icon: KanbanSquare },
   { title: "Configurações", url: "/settings", icon: Settings },
   { title: "Perfil", url: "/profile", icon: User },
