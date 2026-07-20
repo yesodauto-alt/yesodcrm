@@ -147,6 +147,18 @@ export function LeadForm({
                 placeholder="Ex.: Automação"
               />
             </Field>
+          </div>
+
+          <Field label="Objetivo">
+            <Textarea
+              rows={3}
+              value={v.objetivo ?? ""}
+              onChange={(e) => set("objetivo", e.target.value)}
+              placeholder="Ex.: Automatizar o atendimento comercial."
+              className="font-medium"
+            />
+          </Field>
+
 
           <Field label="Tags">
             <div className="flex gap-2">
