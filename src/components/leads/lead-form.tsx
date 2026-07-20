@@ -127,40 +127,26 @@ export function LeadForm({
               />
             </Field>
             <Field label="Origem">
-              <SelectWithCustom
+              <Input
                 value={v.origem ?? ""}
-                options={ORIGEM_OPTIONS as readonly string[]}
-                onChange={(val) => set("origem", val)}
-                placeholder="Selecionar origem"
+                onChange={(e) => set("origem", e.target.value)}
+                placeholder="Ex.: WhatsApp, Indicação..."
               />
             </Field>
             <Field label="Unidade">
-              <SelectWithCustom
+              <Input
                 value={v.unidade ?? ""}
-                options={UNIDADE_OPTIONS as readonly string[]}
-                onChange={(val) => set("unidade", val)}
-                placeholder="Selecionar unidade"
+                onChange={(e) => set("unidade", e.target.value)}
+                placeholder="Ex.: Matriz"
               />
             </Field>
             <Field label="Interesse">
-              <SelectWithCustom
+              <Input
                 value={v.interesse ?? ""}
-                options={INTERESSE_OPTIONS as readonly string[]}
-                onChange={(val) => set("interesse", val)}
-                placeholder="Selecionar interesse"
+                onChange={(e) => set("interesse", e.target.value)}
+                placeholder="Ex.: Automação"
               />
             </Field>
-          </div>
-
-          <Field label="Objetivo">
-            <Textarea
-              rows={3}
-              value={v.objetivo ?? ""}
-              onChange={(e) => set("objetivo", e.target.value)}
-              placeholder="Ex.: Automatizar o atendimento comercial."
-              className="font-medium"
-            />
-          </Field>
 
           <Field label="Tags">
             <div className="flex gap-2">
