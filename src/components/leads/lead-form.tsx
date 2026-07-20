@@ -9,9 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   LEAD_STATUSES,
   STATUS_LABELS,
-  UNIDADE_OPTIONS,
-  ORIGEM_OPTIONS,
-  INTERESSE_OPTIONS,
   type Lead,
   type LeadStatus,
 } from "@/lib/types";
@@ -127,27 +124,24 @@ export function LeadForm({
               />
             </Field>
             <Field label="Origem">
-              <SelectWithCustom
+              <Input
                 value={v.origem ?? ""}
-                options={ORIGEM_OPTIONS as readonly string[]}
-                onChange={(val) => set("origem", val)}
-                placeholder="Selecionar origem"
+                onChange={(e) => set("origem", e.target.value)}
+                placeholder="Ex.: WhatsApp, Indicação..."
               />
             </Field>
             <Field label="Unidade">
-              <SelectWithCustom
+              <Input
                 value={v.unidade ?? ""}
-                options={UNIDADE_OPTIONS as readonly string[]}
-                onChange={(val) => set("unidade", val)}
-                placeholder="Selecionar unidade"
+                onChange={(e) => set("unidade", e.target.value)}
+                placeholder="Ex.: Matriz"
               />
             </Field>
             <Field label="Interesse">
-              <SelectWithCustom
+              <Input
                 value={v.interesse ?? ""}
-                options={INTERESSE_OPTIONS as readonly string[]}
-                onChange={(val) => set("interesse", val)}
-                placeholder="Selecionar interesse"
+                onChange={(e) => set("interesse", e.target.value)}
+                placeholder="Ex.: Automação"
               />
             </Field>
           </div>
@@ -161,6 +155,7 @@ export function LeadForm({
               className="font-medium"
             />
           </Field>
+
 
           <Field label="Tags">
             <div className="flex gap-2">
@@ -260,51 +255,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function SelectWithCustom({
-  value,
-  options,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  options: readonly string[];
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  const isCustom = value !== "" && !options.includes(value);
-  const [mode, setMode] = useState<"select" | "custom">(isCustom ? "custom" : "select");
-
-  if (mode === "custom") {
-    return (
-      <div className="flex gap-2">
-        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Digite..." />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => { setMode("select"); onChange(""); }}
-        >
-          ✕
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <Select
-      value={value || undefined}
-      onValueChange={(x) => {
-        if (x === "__custom__") { setMode("custom"); onChange(""); }
-        else onChange(x);
-      }}
-    >
-      <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
-      <SelectContent>
-        {options.map((o) => (
-          <SelectItem key={o} value={o}>{o}</SelectItem>
-        ))}
-        <SelectItem value="__custom__">+ Adicionar personalizado</SelectItem>
-      </SelectContent>
-    </Select>
-  );
-}
