@@ -32,6 +32,21 @@ function clean<T>(v: T | "" | null | undefined): T | null {
   return v === "" || v == null ? null : (v as T);
 }
 
+const aiAnalysisSchema = z.object({
+  id: z.string().uuid().optional(),
+  email: z.string().optional(),
+  ai_temperatura_sugerida: z.enum(LEAD_TEMPERATURAS).nullish(),
+  ai_motivo: z.string().nullish(),
+  ai_interesses: z.array(z.string()).nullish(),
+  ai_objecoes: z.array(z.string()).nullish(),
+  ai_proxima_acao: z.string().nullish(),
+  conversation_summary: z.string().nullish(),
+});
+
+function _unused_marker() {
+  return v === "" || v == null ? null : (v as T);
+}
+
 export const listLeads = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { search?: string; status?: string; page?: number; pageSize?: number }) => data)
