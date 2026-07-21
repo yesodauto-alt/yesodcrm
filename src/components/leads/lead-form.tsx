@@ -127,6 +127,20 @@ export function LeadForm({
                 </SelectContent>
               </Select>
             </Field>
+            <Field label="Temperatura">
+              <Select
+                value={v.temperatura ?? "none"}
+                onValueChange={(x) => set("temperatura", x === "none" ? null : (x as LeadTemperatura))}
+              >
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— não classificado —</SelectItem>
+                  {LEAD_TEMPERATURAS.map((t) => (
+                    <SelectItem key={t} value={t}>{TEMPERATURA_LABELS[t]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Responsável">
               <Input value={v.responsavel ?? ""} onChange={(e) => set("responsavel", e.target.value)} />
             </Field>
