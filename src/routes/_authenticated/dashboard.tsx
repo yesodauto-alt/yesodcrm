@@ -160,3 +160,12 @@ function Row({ label, value, icon }: { label: string; value: number; icon?: Reac
     </div>
   );
 }
+
+function SdrKpi({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+  return (
+    <div className="p-3 rounded-md border">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</div>
+      <div className="mt-1 text-2xl font-semibold">{value}</div>
+    </div>
+  );
+}
