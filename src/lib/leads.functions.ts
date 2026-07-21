@@ -199,3 +199,105 @@ export const searchLeads = createServerFn({ method: "POST" })
       .limit(8);
     return rows ?? [];
   });
+
+export const updateAiAnalysis = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => aiAnalysisSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { id, email, ...patch } = data as any;
+    const payload: any = { ...patch, ai_ultima_analise: new Date().toISOString() };
+    if (patch.conversation_summary !== undefined) {
+      payload.conversation_summary_updated_at = new Date().toISOString();
+    }
+    let q = context.supabase.from("leads").update(payload);
+    if (id) q = q.eq("id", id);
+    else if (email) q = q.eq("email", email);
+    else throw new Error("id ou email obrigatório");
+    const { data: rows, error } = await q.select();
+    if (error) throw new Error(error.message);
+    return rows;
+  });
+
+export const confirmAiTemperatura = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: lead } = await context.supabase
+      .from("leads")
+      .select("ai_temperatura_sugerida")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!lead?.ai_temperatura_sugerida) throw new Error("Sem sugestão da IA");
+    const { error } = await context.supabase
+      .from("leads")
+      .update({ temperatura: lead.ai_temperatura_sugerida })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true, temperatura: lead.ai_temperatura_sugerida };
+  });
+
+export const sdrQueue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { search?: string; bucket?: string } | undefined) => data ?? {})
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("leads")
+      .select("*")
+      .not("status", "in", "(ganho,perdido)")
+      .limit(500);
+    if (data.search) {
+      const s = `%${data.search}%`;
+      query = query.or(`nome.ilike.${s},empresa.ilike.${s},email.ilike.${s},telefone.ilike.${s},whatsapp.ilike.${s}`);
+    }
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    const list = rows ?? [];
+    const now = Date.now();
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
+
+    const scored = list.map((l: any) => {
+      const followUpVencido = l.follow_up_em && new Date(l.follow_up_em).getTime() < now;
+      const aulaHoje = l.aula_experimental_em
+        && new Date(l.aula_experimental_em) >= startOfToday
+        && new Date(l.aula_experimental_em) <= endOfToday;
+      const isNovo = l.status === "novo";
+      let bucket: string;
+      let priority: number;
+      if (l.temperatura === "quente" && l.aguardando_resposta) { bucket = "quente_sem_retorno"; priority = 1; }
+      else if (aulaHoje) { bucket = "aula_hoje"; priority = 2; }
+      else if (followUpVencido) { bucket = "follow_up_vencido"; priority = 3; }
+      else if (l.temperatura === "morno" && l.aguardando_resposta) { bucket = "morno_sem_interacao"; priority = 4; }
+      else if (isNovo) { bucket = "novo"; priority = 5; }
+      else { bucket = "outros"; priority = 6; }
+      return { ...l, _bucket: bucket, _priority: priority };
+    });
+    scored.sort((a: any, b: any) => a._priority - b._priority || new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const filtered = data.bucket && data.bucket !== "all" ? scored.filter((l: any) => l._bucket === data.bucket) : scored;
+    return { rows: filtered };
+  });
+
+export const sdrStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("leads")
+      .select("id, status, temperatura, aguardando_resposta, follow_up_em, aula_experimental_em");
+    if (error) throw new Error(error.message);
+    const list = rows ?? [];
+    const now = Date.now();
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
+    let novos = 0, quentes = 0, followUps = 0, aulasHoje = 0, semResposta = 0;
+    for (const l of list as any[]) {
+      if (l.status === "novo") novos++;
+      if (l.temperatura === "quente") quentes++;
+      if (l.follow_up_em && new Date(l.follow_up_em).getTime() < now && l.status !== "ganho" && l.status !== "perdido") followUps++;
+      if (l.aula_experimental_em) {
+        const d = new Date(l.aula_experimental_em);
+        if (d >= startOfToday && d <= endOfToday) aulasHoje++;
+      }
+      if (l.aguardando_resposta) semResposta++;
+    }
+    return { novos, quentes, followUps, aulasHoje, semResposta };
+  });
