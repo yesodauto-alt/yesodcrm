@@ -67,6 +67,7 @@ export function LeadForm({
     interesse: initial?.interesse ?? "",
     objetivo: initial?.objetivo ?? "",
     status: (initial?.status as LeadStatus) ?? "novo",
+    temperatura: (initial?.temperatura as LeadTemperatura | null | undefined) ?? null,
     responsavel: initial?.responsavel ?? "",
     valor: initial?.valor ?? null,
     tags: initial?.tags ?? [],
@@ -74,6 +75,13 @@ export function LeadForm({
     conversation_summary: initial?.conversation_summary ?? "",
     conversation_next_action: initial?.conversation_next_action ?? "",
     conversation_notes: initial?.conversation_notes ?? "",
+    aula_experimental_em: initial?.aula_experimental_em
+      ? new Date(initial.aula_experimental_em).toISOString().slice(0, 16)
+      : "",
+    follow_up_em: initial?.follow_up_em
+      ? new Date(initial.follow_up_em).toISOString().slice(0, 16)
+      : "",
+    aguardando_resposta: initial?.aguardando_resposta ?? false,
   });
   const [tagInput, setTagInput] = useState("");
 
