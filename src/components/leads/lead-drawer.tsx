@@ -88,6 +88,9 @@ export function LeadDrawer({ id, open, onOpenChange }: { id: string | null; open
                 </Button>
               </div>
             </TabsContent>
+            <TabsContent value="ai" className="mt-4">
+              <AiAnalysis lead={data.lead} />
+            </TabsContent>
             <TabsContent value="tasks" className="mt-4">
               <TaskList leadId={id} />
             </TabsContent>
