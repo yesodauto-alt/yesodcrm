@@ -48,7 +48,7 @@ function Dashboard() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <SdrKpi icon={<Sparkles className="h-4 w-4 text-blue-500" />} label="Leads Novos" value={sstats?.novos ?? 0} />
             <SdrKpi icon={<Flame className="h-4 w-4 text-rose-500" />} label="Leads Quentes" value={sstats?.quentes ?? 0} />
-            <SdrKpi icon={<Clock className="h-4 w-4 text-amber-500" />} label="Follow-ups Pendentes" value={sstats?.followUpsPendentes ?? 0} />
+            <SdrKpi icon={<Clock className="h-4 w-4 text-amber-500" />} label="Follow-ups Pendentes" value={sstats?.followUps ?? 0} />
             <SdrKpi icon={<CalendarClock className="h-4 w-4 text-emerald-500" />} label="Aulas Experimentais" value={sstats?.aulasHoje ?? 0} />
             <SdrKpi icon={<MessageCircleQuestion className="h-4 w-4 text-purple-500" />} label="Sem resposta" value={sstats?.semResposta ?? 0} />
             <SdrKpi icon={<ListTodo className="h-4 w-4 text-cyan-500" />} label="Tarefas Pendentes" value={sstats?.tarefasPendentes ?? 0} />
