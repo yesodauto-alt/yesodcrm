@@ -31,6 +31,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Fila SDR", url: "/queue", icon: Flame },
   { title: "Leads", url: "/leads", icon: Users },
   { title: "Contatos", url: "/contacts", icon: Contact },
   { title: "Pipeline", url: "/pipeline", icon: KanbanSquare },
