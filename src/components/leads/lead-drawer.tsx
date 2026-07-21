@@ -63,8 +63,9 @@ export function LeadDrawer({ id, open, onOpenChange }: { id: string | null; open
         </SheetHeader>
         {data?.lead && (
           <Tabs defaultValue="details" className="mt-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details">Detalhes</TabsTrigger>
+              <TabsTrigger value="ai">Inteligência</TabsTrigger>
               <TabsTrigger value="tasks">Tarefas</TabsTrigger>
               <TabsTrigger value="history">Histórico</TabsTrigger>
             </TabsList>
