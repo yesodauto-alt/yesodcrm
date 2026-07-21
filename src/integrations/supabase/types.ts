@@ -131,6 +131,16 @@ export type Database = {
       }
       leads: {
         Row: {
+          aguardando_resposta: boolean
+          ai_interesses: string[]
+          ai_motivo: string | null
+          ai_objecoes: string[]
+          ai_proxima_acao: string | null
+          ai_temperatura_sugerida:
+            | Database["public"]["Enums"]["lead_temperatura"]
+            | null
+          ai_ultima_analise: string | null
+          aula_experimental_em: string | null
           cargo: string | null
           conversation_next_action: string | null
           conversation_notes: string | null
@@ -140,6 +150,7 @@ export type Database = {
           created_by: string | null
           email: string | null
           empresa: string | null
+          follow_up_em: string | null
           id: string
           interesse: string | null
           nome: string
@@ -150,12 +161,24 @@ export type Database = {
           status: Database["public"]["Enums"]["lead_status"]
           tags: string[]
           telefone: string | null
+          temperatura: Database["public"]["Enums"]["lead_temperatura"] | null
+          ultima_interacao_em: string | null
           unidade: string | null
           updated_at: string
           valor: number | null
           whatsapp: string | null
         }
         Insert: {
+          aguardando_resposta?: boolean
+          ai_interesses?: string[]
+          ai_motivo?: string | null
+          ai_objecoes?: string[]
+          ai_proxima_acao?: string | null
+          ai_temperatura_sugerida?:
+            | Database["public"]["Enums"]["lead_temperatura"]
+            | null
+          ai_ultima_analise?: string | null
+          aula_experimental_em?: string | null
           cargo?: string | null
           conversation_next_action?: string | null
           conversation_notes?: string | null
@@ -165,6 +188,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           empresa?: string | null
+          follow_up_em?: string | null
           id?: string
           interesse?: string | null
           nome: string
@@ -175,12 +199,24 @@ export type Database = {
           status?: Database["public"]["Enums"]["lead_status"]
           tags?: string[]
           telefone?: string | null
+          temperatura?: Database["public"]["Enums"]["lead_temperatura"] | null
+          ultima_interacao_em?: string | null
           unidade?: string | null
           updated_at?: string
           valor?: number | null
           whatsapp?: string | null
         }
         Update: {
+          aguardando_resposta?: boolean
+          ai_interesses?: string[]
+          ai_motivo?: string | null
+          ai_objecoes?: string[]
+          ai_proxima_acao?: string | null
+          ai_temperatura_sugerida?:
+            | Database["public"]["Enums"]["lead_temperatura"]
+            | null
+          ai_ultima_analise?: string | null
+          aula_experimental_em?: string | null
           cargo?: string | null
           conversation_next_action?: string | null
           conversation_notes?: string | null
@@ -190,6 +226,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           empresa?: string | null
+          follow_up_em?: string | null
           id?: string
           interesse?: string | null
           nome?: string
@@ -200,6 +237,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["lead_status"]
           tags?: string[]
           telefone?: string | null
+          temperatura?: Database["public"]["Enums"]["lead_temperatura"] | null
+          ultima_interacao_em?: string | null
           unidade?: string | null
           updated_at?: string
           valor?: number | null
@@ -359,6 +398,7 @@ export type Database = {
         | "negociacao"
         | "ganho"
         | "perdido"
+      lead_temperatura: "frio" | "morno" | "quente"
       task_priority: "baixa" | "media" | "alta"
       task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
     }
@@ -508,6 +548,7 @@ export const Constants = {
         "ganho",
         "perdido",
       ],
+      lead_temperatura: ["frio", "morno", "quente"],
       task_priority: ["baixa", "media", "alta"],
       task_status: ["pendente", "em_andamento", "concluida", "cancelada"],
     },

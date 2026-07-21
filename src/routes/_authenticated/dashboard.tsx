@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { dashboardStats } from "@/lib/leads.functions";
+import { dashboardStats, sdrStats } from "@/lib/leads.functions";
 import { taskStats } from "@/lib/tasks.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { STATUS_LABELS, STATUS_COLORS, LEAD_STATUSES, TASK_STATUS_LABELS, TASK_PRIORITY_COLORS, TASK_PRIORITY_LABELS } from "@/lib/types";
-import { Users, TrendingUp, Handshake, Trophy, XCircle, Sparkles, ListTodo, AlertTriangle, Clock } from "lucide-react";
+import { STATUS_LABELS, STATUS_COLORS, LEAD_STATUSES, TASK_PRIORITY_COLORS, TASK_PRIORITY_LABELS } from "@/lib/types";
+import { Users, TrendingUp, Handshake, Trophy, XCircle, Sparkles, ListTodo, AlertTriangle, Clock, Flame, CalendarClock, MessageCircleQuestion } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
@@ -19,8 +19,10 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function Dashboard() {
   const fetchStats = useServerFn(dashboardStats);
   const fetchTaskStats = useServerFn(taskStats);
+  const fetchSdrStats = useServerFn(sdrStats);
   const { data } = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats() });
   const { data: tstats } = useQuery({ queryKey: ["task-stats"], queryFn: () => fetchTaskStats() });
+  const { data: sstats } = useQuery({ queryKey: ["sdr-stats"], queryFn: () => fetchSdrStats() });
 
   const kpis = [
     { label: "Total de Leads", value: data?.total ?? 0, icon: Users, color: "text-foreground" },
@@ -39,6 +41,20 @@ function Dashboard() {
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p className="text-sm text-muted-foreground">Visão geral dos leads</p>
       </div>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Flame className="h-4 w-4 text-rose-500" />Painel do SDR</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <SdrKpi icon={<Sparkles className="h-4 w-4 text-blue-500" />} label="Leads Novos" value={sstats?.novos ?? 0} />
+            <SdrKpi icon={<Flame className="h-4 w-4 text-rose-500" />} label="Leads Quentes" value={sstats?.quentes ?? 0} />
+            <SdrKpi icon={<Clock className="h-4 w-4 text-amber-500" />} label="Follow-ups Pendentes" value={sstats?.followUps ?? 0} />
+            <SdrKpi icon={<CalendarClock className="h-4 w-4 text-emerald-500" />} label="Aulas Experimentais" value={sstats?.aulasHoje ?? 0} />
+            <SdrKpi icon={<MessageCircleQuestion className="h-4 w-4 text-purple-500" />} label="Sem resposta" value={sstats?.semResposta ?? 0} />
+            <SdrKpi icon={<ListTodo className="h-4 w-4 text-cyan-500" />} label="Tarefas Pendentes" value={sstats?.tarefasPendentes ?? 0} />
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {kpis.map((k) => (
@@ -141,6 +157,15 @@ function Row({ label, value, icon }: { label: string; value: number; icon?: Reac
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted-foreground flex items-center gap-1.5">{icon}{label}</span>
       <span className="font-semibold">{value}</span>
+    </div>
+  );
+}
+
+function SdrKpi({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+  return (
+    <div className="p-3 rounded-md border">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</div>
+      <div className="mt-1 text-2xl font-semibold">{value}</div>
     </div>
   );
 }

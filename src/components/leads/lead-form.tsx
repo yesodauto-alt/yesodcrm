@@ -9,8 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   LEAD_STATUSES,
   STATUS_LABELS,
+  LEAD_TEMPERATURAS,
+  TEMPERATURA_LABELS,
   type Lead,
   type LeadStatus,
+  type LeadTemperatura,
 } from "@/lib/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,6 +31,7 @@ export type LeadFormValues = {
   interesse?: string | null;
   objetivo?: string | null;
   status: LeadStatus;
+  temperatura?: LeadTemperatura | null;
   responsavel?: string | null;
   valor?: number | null;
   tags: string[];
@@ -35,6 +39,9 @@ export type LeadFormValues = {
   conversation_summary?: string | null;
   conversation_next_action?: string | null;
   conversation_notes?: string | null;
+  aula_experimental_em?: string | null;
+  follow_up_em?: string | null;
+  aguardando_resposta?: boolean;
 };
 
 export function LeadForm({
@@ -60,6 +67,7 @@ export function LeadForm({
     interesse: initial?.interesse ?? "",
     objetivo: initial?.objetivo ?? "",
     status: (initial?.status as LeadStatus) ?? "novo",
+    temperatura: (initial?.temperatura as LeadTemperatura | null | undefined) ?? null,
     responsavel: initial?.responsavel ?? "",
     valor: initial?.valor ?? null,
     tags: initial?.tags ?? [],
@@ -67,6 +75,13 @@ export function LeadForm({
     conversation_summary: initial?.conversation_summary ?? "",
     conversation_next_action: initial?.conversation_next_action ?? "",
     conversation_notes: initial?.conversation_notes ?? "",
+    aula_experimental_em: initial?.aula_experimental_em
+      ? new Date(initial.aula_experimental_em).toISOString().slice(0, 16)
+      : "",
+    follow_up_em: initial?.follow_up_em
+      ? new Date(initial.follow_up_em).toISOString().slice(0, 16)
+      : "",
+    aguardando_resposta: initial?.aguardando_resposta ?? false,
   });
   const [tagInput, setTagInput] = useState("");
 
@@ -108,6 +123,20 @@ export function LeadForm({
                 <SelectContent>
                   {LEAD_STATUSES.map((s) => (
                     <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Temperatura">
+              <Select
+                value={v.temperatura ?? "none"}
+                onValueChange={(x) => set("temperatura", x === "none" ? null : (x as LeadTemperatura))}
+              >
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— não classificado —</SelectItem>
+                  {LEAD_TEMPERATURAS.map((t) => (
+                    <SelectItem key={t} value={t}>{TEMPERATURA_LABELS[t]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -191,6 +220,37 @@ export function LeadForm({
           <Field label="Observações">
             <Textarea rows={3} value={v.observacoes ?? ""} onChange={(e) => set("observacoes", e.target.value)} />
           </Field>
+        </CardContent>
+      </Card>
+
+      {/* Agendamentos / Operacional */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Agendamento & Follow-up</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Field label="Aula experimental agendada para">
+            <Input
+              type="datetime-local"
+              value={v.aula_experimental_em ?? ""}
+              onChange={(e) => set("aula_experimental_em", e.target.value)}
+            />
+          </Field>
+          <Field label="Próximo follow-up">
+            <Input
+              type="datetime-local"
+              value={v.follow_up_em ?? ""}
+              onChange={(e) => set("follow_up_em", e.target.value)}
+            />
+          </Field>
+          <label className="flex items-center gap-2 text-sm md:col-span-2">
+            <input
+              type="checkbox"
+              checked={!!v.aguardando_resposta}
+              onChange={(e) => set("aguardando_resposta", e.target.checked)}
+            />
+            Aguardando resposta do lead
+          </label>
         </CardContent>
       </Card>
 

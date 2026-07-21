@@ -30,6 +30,21 @@ export const STATUS_COLORS: Record<LeadStatus, string> = {
   perdido: "bg-rose-500/10 text-rose-500 border-rose-500/20",
 };
 
+export const LEAD_TEMPERATURAS = ["frio", "morno", "quente"] as const;
+export type LeadTemperatura = (typeof LEAD_TEMPERATURAS)[number];
+
+export const TEMPERATURA_LABELS: Record<LeadTemperatura, string> = {
+  frio: "Frio",
+  morno: "Morno",
+  quente: "Quente",
+};
+
+export const TEMPERATURA_COLORS: Record<LeadTemperatura, string> = {
+  frio: "bg-sky-500/10 text-sky-500 border-sky-500/20",
+  morno: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  quente: "bg-rose-500/10 text-rose-500 border-rose-500/20",
+};
+
 export interface Lead {
   id: string;
   nome: string;
@@ -43,6 +58,7 @@ export interface Lead {
   interesse: string | null;
   objetivo: string | null;
   status: LeadStatus;
+  temperatura: LeadTemperatura | null;
   responsavel: string | null;
   valor: number | null;
   tags: string[];
@@ -51,6 +67,16 @@ export interface Lead {
   conversation_summary_updated_at: string | null;
   conversation_next_action: string | null;
   conversation_notes: string | null;
+  ai_temperatura_sugerida: LeadTemperatura | null;
+  ai_motivo: string | null;
+  ai_interesses: string[];
+  ai_objecoes: string[];
+  ai_proxima_acao: string | null;
+  ai_ultima_analise: string | null;
+  aula_experimental_em: string | null;
+  follow_up_em: string | null;
+  ultima_interacao_em: string | null;
+  aguardando_resposta: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;

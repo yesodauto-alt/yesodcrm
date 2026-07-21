@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedQueueRouteImport } from './routes/_authenticated/queue'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
@@ -25,6 +26,7 @@ import { Route as ApiPublicWebhooksUpdateContactRouteImport } from './routes/api
 import { Route as ApiPublicWebhooksNewTaskRouteImport } from './routes/api/public/webhooks/new-task'
 import { Route as ApiPublicWebhooksNewLeadRouteImport } from './routes/api/public/webhooks/new-lead'
 import { Route as ApiPublicWebhooksNewContactRouteImport } from './routes/api/public/webhooks/new-contact'
+import { Route as ApiPublicWebhooksAiAnalysisRouteImport } from './routes/api/public/webhooks/ai-analysis'
 import { Route as ApiPublicLeadsIdStatusRouteImport } from './routes/api/public/leads/$id/status'
 import { Route as ApiPublicLeadsIdNoteRouteImport } from './routes/api/public/leads/$id/note'
 
@@ -45,6 +47,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedQueueRoute = AuthenticatedQueueRouteImport.update({
+  id: '/queue',
+  path: '/queue',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
@@ -113,6 +120,12 @@ const ApiPublicWebhooksNewContactRoute =
     path: '/api/public/webhooks/new-contact',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicWebhooksAiAnalysisRoute =
+  ApiPublicWebhooksAiAnalysisRouteImport.update({
+    id: '/api/public/webhooks/ai-analysis',
+    path: '/api/public/webhooks/ai-analysis',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicLeadsIdStatusRoute = ApiPublicLeadsIdStatusRouteImport.update({
   id: '/api/public/leads/$id/status',
   path: '/api/public/leads/$id/status',
@@ -132,7 +145,9 @@ export interface FileRoutesByFullPath {
   '/leads': typeof AuthenticatedLeadsRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/queue': typeof AuthenticatedQueueRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
   '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
@@ -151,7 +166,9 @@ export interface FileRoutesByTo {
   '/leads': typeof AuthenticatedLeadsRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/queue': typeof AuthenticatedQueueRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
   '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
@@ -172,7 +189,9 @@ export interface FileRoutesById {
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
   '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/queue': typeof AuthenticatedQueueRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
   '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
@@ -193,7 +212,9 @@ export interface FileRouteTypes {
     | '/leads'
     | '/pipeline'
     | '/profile'
+    | '/queue'
     | '/settings'
+    | '/api/public/webhooks/ai-analysis'
     | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
     | '/api/public/webhooks/new-task'
@@ -212,7 +233,9 @@ export interface FileRouteTypes {
     | '/leads'
     | '/pipeline'
     | '/profile'
+    | '/queue'
     | '/settings'
+    | '/api/public/webhooks/ai-analysis'
     | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
     | '/api/public/webhooks/new-task'
@@ -232,7 +255,9 @@ export interface FileRouteTypes {
     | '/_authenticated/leads'
     | '/_authenticated/pipeline'
     | '/_authenticated/profile'
+    | '/_authenticated/queue'
     | '/_authenticated/settings'
+    | '/api/public/webhooks/ai-analysis'
     | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
     | '/api/public/webhooks/new-task'
@@ -248,6 +273,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicWebhooksAiAnalysisRoute: typeof ApiPublicWebhooksAiAnalysisRoute
   ApiPublicWebhooksNewContactRoute: typeof ApiPublicWebhooksNewContactRoute
   ApiPublicWebhooksNewLeadRoute: typeof ApiPublicWebhooksNewLeadRoute
   ApiPublicWebhooksNewTaskRoute: typeof ApiPublicWebhooksNewTaskRoute
@@ -287,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/queue': {
+      id: '/_authenticated/queue'
+      path: '/queue'
+      fullPath: '/queue'
+      preLoaderRoute: typeof AuthenticatedQueueRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/profile': {
@@ -373,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksNewContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhooks/ai-analysis': {
+      id: '/api/public/webhooks/ai-analysis'
+      path: '/api/public/webhooks/ai-analysis'
+      fullPath: '/api/public/webhooks/ai-analysis'
+      preLoaderRoute: typeof ApiPublicWebhooksAiAnalysisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/leads/$id/status': {
       id: '/api/public/leads/$id/status'
       path: '/api/public/leads/$id/status'
@@ -396,6 +436,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
   AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedQueueRoute: typeof AuthenticatedQueueRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
 }
 
@@ -405,6 +446,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
   AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedQueueRoute: AuthenticatedQueueRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
 }
 
@@ -415,6 +457,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicWebhooksAiAnalysisRoute: ApiPublicWebhooksAiAnalysisRoute,
   ApiPublicWebhooksNewContactRoute: ApiPublicWebhooksNewContactRoute,
   ApiPublicWebhooksNewLeadRoute: ApiPublicWebhooksNewLeadRoute,
   ApiPublicWebhooksNewTaskRoute: ApiPublicWebhooksNewTaskRoute,

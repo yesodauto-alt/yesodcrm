@@ -12,6 +12,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Trash2 } from "lucide-react";
 import { TaskList } from "@/components/tasks/task-list";
+import { AiAnalysis } from "@/components/leads/ai-analysis";
 
 export function LeadDrawer({ id, open, onOpenChange }: { id: string | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const qc = useQueryClient();
@@ -62,8 +63,9 @@ export function LeadDrawer({ id, open, onOpenChange }: { id: string | null; open
         </SheetHeader>
         {data?.lead && (
           <Tabs defaultValue="details" className="mt-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details">Detalhes</TabsTrigger>
+              <TabsTrigger value="ai">Inteligência</TabsTrigger>
               <TabsTrigger value="tasks">Tarefas</TabsTrigger>
               <TabsTrigger value="history">Histórico</TabsTrigger>
             </TabsList>
@@ -85,6 +87,9 @@ export function LeadDrawer({ id, open, onOpenChange }: { id: string | null; open
                   Excluir lead
                 </Button>
               </div>
+            </TabsContent>
+            <TabsContent value="ai" className="mt-4">
+              <AiAnalysis lead={data.lead} />
             </TabsContent>
             <TabsContent value="tasks" className="mt-4">
               <TaskList leadId={id} />
