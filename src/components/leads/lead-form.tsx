@@ -9,8 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   LEAD_STATUSES,
   STATUS_LABELS,
+  LEAD_TEMPERATURAS,
+  TEMPERATURA_LABELS,
   type Lead,
   type LeadStatus,
+  type LeadTemperatura,
 } from "@/lib/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,6 +31,7 @@ export type LeadFormValues = {
   interesse?: string | null;
   objetivo?: string | null;
   status: LeadStatus;
+  temperatura?: LeadTemperatura | null;
   responsavel?: string | null;
   valor?: number | null;
   tags: string[];
@@ -35,6 +39,9 @@ export type LeadFormValues = {
   conversation_summary?: string | null;
   conversation_next_action?: string | null;
   conversation_notes?: string | null;
+  aula_experimental_em?: string | null;
+  follow_up_em?: string | null;
+  aguardando_resposta?: boolean;
 };
 
 export function LeadForm({
