@@ -12,6 +12,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Trash2 } from "lucide-react";
 import { TaskList } from "@/components/tasks/task-list";
+import { AiAnalysis } from "@/components/leads/ai-analysis";
 
 export function LeadDrawer({ id, open, onOpenChange }: { id: string | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const qc = useQueryClient();
