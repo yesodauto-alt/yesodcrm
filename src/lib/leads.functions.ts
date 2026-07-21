@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { LEAD_STATUSES } from "./types";
+import { LEAD_STATUSES, LEAD_TEMPERATURAS } from "./types";
 
 const leadInputSchema = z.object({
   nome: z.string().min(1),
@@ -15,6 +15,7 @@ const leadInputSchema = z.object({
   interesse: z.string().nullish(),
   objetivo: z.string().nullish(),
   status: z.enum(LEAD_STATUSES).default("novo"),
+  temperatura: z.enum(LEAD_TEMPERATURAS).nullish(),
   responsavel: z.string().nullish(),
   valor: z.number().nullish(),
   tags: z.array(z.string()).default([]),
@@ -22,6 +23,9 @@ const leadInputSchema = z.object({
   conversation_summary: z.string().nullish(),
   conversation_next_action: z.string().nullish(),
   conversation_notes: z.string().nullish(),
+  aula_experimental_em: z.string().nullish(),
+  follow_up_em: z.string().nullish(),
+  aguardando_resposta: z.boolean().optional(),
 });
 
 function clean<T>(v: T | "" | null | undefined): T | null {
