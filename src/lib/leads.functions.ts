@@ -43,9 +43,6 @@ const aiAnalysisSchema = z.object({
   conversation_summary: z.string().nullish(),
 });
 
-function _unused_marker() {
-  return v === "" || v == null ? null : (v as T);
-}
 
 export const listLeads = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
