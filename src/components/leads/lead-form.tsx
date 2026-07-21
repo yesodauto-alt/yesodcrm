@@ -223,6 +223,37 @@ export function LeadForm({
         </CardContent>
       </Card>
 
+      {/* Agendamentos / Operacional */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Agendamento & Follow-up</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Field label="Aula experimental agendada para">
+            <Input
+              type="datetime-local"
+              value={v.aula_experimental_em ?? ""}
+              onChange={(e) => set("aula_experimental_em", e.target.value)}
+            />
+          </Field>
+          <Field label="Próximo follow-up">
+            <Input
+              type="datetime-local"
+              value={v.follow_up_em ?? ""}
+              onChange={(e) => set("follow_up_em", e.target.value)}
+            />
+          </Field>
+          <label className="flex items-center gap-2 text-sm md:col-span-2">
+            <input
+              type="checkbox"
+              checked={!!v.aguardando_resposta}
+              onChange={(e) => set("aguardando_resposta", e.target.checked)}
+            />
+            Aguardando resposta do lead
+          </label>
+        </CardContent>
+      </Card>
+
       {/* Conversa */}
       <Card>
         <CardHeader className="pb-3">
