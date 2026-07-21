@@ -299,5 +299,9 @@ export const sdrStats = createServerFn({ method: "GET" })
       }
       if (l.aguardando_resposta) semResposta++;
     }
-    return { novos, quentes, followUps, aulasHoje, semResposta };
+    const { count: tarefasPendentes } = await context.supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["pendente", "em_andamento"]);
+    return { novos, quentes, followUps, aulasHoje, semResposta, tarefasPendentes: tarefasPendentes ?? 0 };
   });
