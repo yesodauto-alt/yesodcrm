@@ -1,26 +1,26 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getLead, updateLead, addNote, deleteLead } from "@/lib/leads.functions";
+import { getLead, updateLead, deleteLead } from "@/lib/leads.functions";
 import { LeadForm, type LeadFormValues } from "./lead-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
 import { toast } from "sonner";
-import { formatDistanceToNow, format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Trash2 } from "lucide-react";
 import { TaskList } from "@/components/tasks/task-list";
 import { AiAnalysis } from "@/components/leads/ai-analysis";
+import { LeadIndicators } from "@/components/leads/lead-indicators";
+import { SummaryCards } from "@/components/leads/summary-cards";
+import { FollowUpsTab } from "@/components/leads/follow-ups-tab";
+import { ObservationsTab } from "@/components/leads/observations-tab";
+import { ConversationsTab } from "@/components/leads/conversations-tab";
+import { TimelineTab } from "@/components/leads/timeline-tab";
 
 export function LeadDrawer({ id, open, onOpenChange }: { id: string | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const qc = useQueryClient();
   const fetchLead = useServerFn(getLead);
   const update = useServerFn(updateLead);
-  const note = useServerFn(addNote);
   const del = useServerFn(deleteLead);
-  const [noteText, setNoteText] = useState("");
 
   const { data } = useQuery({
     queryKey: ["lead", id],
@@ -37,15 +37,6 @@ export function LeadDrawer({ id, open, onOpenChange }: { id: string | null; open
     onError: (e: any) => toast.error(e.message),
   });
 
-  const noteMut = useMutation({
-    mutationFn: () => note({ data: { id: id!, note: noteText } }),
-    onSuccess: () => {
-      setNoteText("");
-      toast.success("Observação adicionada");
-      qc.invalidateQueries({ queryKey: ["lead", id] });
-    },
-  });
-
   const delMut = useMutation({
     mutationFn: () => del({ data: { id: id! } }),
     onSuccess: () => {
@@ -55,76 +46,66 @@ export function LeadDrawer({ id, open, onOpenChange }: { id: string | null; open
     },
   });
 
+  const lead = data?.lead;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{data?.lead?.nome ?? "Lead"}</SheetTitle>
+          <div className="flex flex-col gap-2">
+            <SheetTitle>{lead?.nome ?? "Lead"}</SheetTitle>
+            {lead && <LeadIndicators lead={lead as any} />}
+          </div>
         </SheetHeader>
-        {data?.lead && (
-          <Tabs defaultValue="details" className="mt-4">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="details">Detalhes</TabsTrigger>
-              <TabsTrigger value="ai">Inteligência</TabsTrigger>
-              <TabsTrigger value="tasks">Tarefas</TabsTrigger>
-              <TabsTrigger value="history">Histórico</TabsTrigger>
-            </TabsList>
-            <TabsContent value="details" className="mt-4">
-              <LeadForm
-                initial={data.lead}
-                onSubmit={(v) => updateMut.mutate(v)}
-                submitting={updateMut.isPending}
-              />
-              <div className="border-t mt-6 pt-4 flex justify-end">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    if (confirm("Excluir este lead?")) delMut.mutate();
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Excluir lead
-                </Button>
-              </div>
-            </TabsContent>
-            <TabsContent value="ai" className="mt-4">
-              <AiAnalysis lead={data.lead} />
-            </TabsContent>
-            <TabsContent value="tasks" className="mt-4">
-              <TaskList leadId={id} />
-            </TabsContent>
-            <TabsContent value="history" className="mt-4 space-y-4">
-              <div className="space-y-2">
-                <Textarea
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  placeholder="Adicionar observação..."
-                  rows={3}
+        {lead && id && (
+          <div className="mt-4 space-y-4">
+            <SummaryCards lead={lead as any} />
+            <Tabs defaultValue="details">
+              <TabsList className="grid w-full grid-cols-7">
+                <TabsTrigger value="details">Detalhes</TabsTrigger>
+                <TabsTrigger value="ai">IA</TabsTrigger>
+                <TabsTrigger value="tasks">Tarefas</TabsTrigger>
+                <TabsTrigger value="followups">Follow-ups</TabsTrigger>
+                <TabsTrigger value="obs">Obs.</TabsTrigger>
+                <TabsTrigger value="conv">Conversas</TabsTrigger>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              </TabsList>
+              <TabsContent value="details" className="mt-4">
+                <LeadForm
+                  initial={lead}
+                  onSubmit={(v) => updateMut.mutate(v)}
+                  submitting={updateMut.isPending}
                 />
-                <Button size="sm" disabled={!noteText.trim() || noteMut.isPending} onClick={() => noteMut.mutate()}>
-                  Adicionar observação
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {data.history.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Sem atividades ainda.</p>
-                )}
-                {data.history.map((h: any) => (
-                  <div key={h.id} className="border-l-2 border-primary/40 pl-3 py-1">
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(h.created_at), "dd/MM/yyyy HH:mm")} ·{" "}
-                      {formatDistanceToNow(new Date(h.created_at), { addSuffix: true, locale: ptBR })}
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-medium capitalize">{h.tipo.replace("_", " ")}: </span>
-                      {h.descricao}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+                <div className="border-t mt-6 pt-4 flex justify-end">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => { if (confirm("Excluir este lead?")) delMut.mutate(); }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" /> Excluir lead
+                  </Button>
+                </div>
+              </TabsContent>
+              <TabsContent value="ai" className="mt-4">
+                <AiAnalysis lead={lead as any} />
+              </TabsContent>
+              <TabsContent value="tasks" className="mt-4">
+                <TaskList leadId={id} />
+              </TabsContent>
+              <TabsContent value="followups" className="mt-4">
+                <FollowUpsTab leadId={id} />
+              </TabsContent>
+              <TabsContent value="obs" className="mt-4">
+                <ObservationsTab leadId={id} />
+              </TabsContent>
+              <TabsContent value="conv" className="mt-4">
+                <ConversationsTab leadId={id} />
+              </TabsContent>
+              <TabsContent value="timeline" className="mt-4">
+                <TimelineTab leadId={id} />
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
       </SheetContent>
     </Sheet>
