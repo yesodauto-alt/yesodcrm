@@ -88,6 +88,88 @@ export type Database = {
           },
         ]
       }
+      lead_conversations: {
+        Row: {
+          created_at: string
+          external_id: string | null
+          external_url: string | null
+          id: string
+          lead_id: string
+          occurred_at: string
+          responsavel: string | null
+          resumo_ai: string | null
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          external_id?: string | null
+          external_url?: string | null
+          id?: string
+          lead_id: string
+          occurred_at?: string
+          responsavel?: string | null
+          resumo_ai?: string | null
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          external_id?: string | null
+          external_url?: string | null
+          id?: string
+          lead_id?: string
+          occurred_at?: string
+          responsavel?: string | null
+          resumo_ai?: string | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_follow_ups: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          lead_id: string
+          proximo_contato: string | null
+          resultado: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          id?: string
+          lead_id: string
+          proximo_contato?: string | null
+          resultado?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          lead_id?: string
+          proximo_contato?: string | null
+          resultado?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_follow_ups_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_history: {
         Row: {
           created_at: string
@@ -122,6 +204,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "lead_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_observations: {
+        Row: {
+          created_at: string
+          edited: boolean
+          id: string
+          lead_id: string
+          texto: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          edited?: boolean
+          id?: string
+          lead_id: string
+          texto: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          edited?: boolean
+          id?: string
+          lead_id?: string
+          texto?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_observations_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
@@ -390,6 +510,23 @@ export type Database = {
         | "task_updated"
         | "task_completed"
         | "task_cancelled"
+        | "field_change"
+        | "unidade_change"
+        | "responsavel_change"
+        | "origem_change"
+        | "interesse_change"
+        | "objetivo_change"
+        | "tags_change"
+        | "ai_summary"
+        | "follow_up"
+        | "observacao"
+        | "observacao_edit"
+        | "aula_agendada"
+        | "aula_realizada"
+        | "matricula"
+        | "perdido"
+        | "reaberto"
+        | "import"
       lead_status:
         | "novo"
         | "contato"
@@ -538,6 +675,23 @@ export const Constants = {
         "task_updated",
         "task_completed",
         "task_cancelled",
+        "field_change",
+        "unidade_change",
+        "responsavel_change",
+        "origem_change",
+        "interesse_change",
+        "objetivo_change",
+        "tags_change",
+        "ai_summary",
+        "follow_up",
+        "observacao",
+        "observacao_edit",
+        "aula_agendada",
+        "aula_realizada",
+        "matricula",
+        "perdido",
+        "reaberto",
+        "import",
       ],
       lead_status: [
         "novo",
