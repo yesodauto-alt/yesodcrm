@@ -25,6 +25,7 @@ const schema = z.object({
     conversation_summary_updated_at: z.string().nullable().optional(),
     conversation_next_action: z.string().nullable().optional(),
     conversation_notes: z.string().nullable().optional(),
+    channel_id: z.string().uuid().nullable().optional(),
   }),
 });
 
