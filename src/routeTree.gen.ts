@@ -19,6 +19,7 @@ import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
+import { Route as AuthenticatedChannelsRouteImport } from './routes/_authenticated/channels'
 import { Route as ApiPublicLeadsIndexRouteImport } from './routes/api/public/leads/index'
 import { Route as ApiPublicWebhooksUpdateTaskRouteImport } from './routes/api/public/webhooks/update-task'
 import { Route as ApiPublicWebhooksUpdateLeadRouteImport } from './routes/api/public/webhooks/update-lead'
@@ -77,6 +78,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
   id: '/contacts',
   path: '/contacts',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChannelsRoute = AuthenticatedChannelsRouteImport.update({
+  id: '/channels',
+  path: '/channels',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const ApiPublicLeadsIndexRoute = ApiPublicLeadsIndexRouteImport.update({
@@ -140,6 +146,7 @@ const ApiPublicLeadsIdNoteRoute = ApiPublicLeadsIdNoteRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/channels': typeof AuthenticatedChannelsRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/leads': typeof AuthenticatedLeadsRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/channels': typeof AuthenticatedChannelsRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/leads': typeof AuthenticatedLeadsRoute
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/channels': typeof AuthenticatedChannelsRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/channels'
     | '/contacts'
     | '/dashboard'
     | '/leads'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/channels'
     | '/contacts'
     | '/dashboard'
     | '/leads'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/channels'
     | '/_authenticated/contacts'
     | '/_authenticated/dashboard'
     | '/_authenticated/leads'
@@ -357,6 +369,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContactsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/channels': {
+      id: '/_authenticated/channels'
+      path: '/channels'
+      fullPath: '/channels'
+      preLoaderRoute: typeof AuthenticatedChannelsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/leads/': {
       id: '/api/public/leads/'
       path: '/api/public/leads'
@@ -431,6 +450,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedChannelsRoute: typeof AuthenticatedChannelsRoute
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
@@ -441,6 +461,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedChannelsRoute: AuthenticatedChannelsRoute,
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
