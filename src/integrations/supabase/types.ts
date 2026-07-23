@@ -14,6 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      channel_logs: {
+        Row: {
+          channel_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          metadata: Json
+          tipo: string
+          user_id: string | null
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          metadata?: Json
+          tipo: string
+          user_id?: string | null
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          metadata?: Json
+          tipo?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_logs_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      channels: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          last_sync_at: string | null
+          metadata: Json
+          nome: string
+          numero: string | null
+          responsavel: string | null
+          status: Database["public"]["Enums"]["channel_status"]
+          tipo: Database["public"]["Enums"]["channel_type"]
+          token: string | null
+          unidades: string[]
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          last_sync_at?: string | null
+          metadata?: Json
+          nome: string
+          numero?: string | null
+          responsavel?: string | null
+          status?: Database["public"]["Enums"]["channel_status"]
+          tipo?: Database["public"]["Enums"]["channel_type"]
+          token?: string | null
+          unidades?: string[]
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          last_sync_at?: string | null
+          metadata?: Json
+          nome?: string
+          numero?: string | null
+          responsavel?: string | null
+          status?: Database["public"]["Enums"]["channel_status"]
+          tipo?: Database["public"]["Enums"]["channel_type"]
+          token?: string | null
+          unidades?: string[]
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           cargo: string | null
@@ -90,39 +185,52 @@ export type Database = {
       }
       lead_conversations: {
         Row: {
+          channel_id: string | null
           created_at: string
           external_id: string | null
           external_url: string | null
           id: string
           lead_id: string
+          numero: string | null
           occurred_at: string
           responsavel: string | null
           resumo_ai: string | null
           source: string | null
         }
         Insert: {
+          channel_id?: string | null
           created_at?: string
           external_id?: string | null
           external_url?: string | null
           id?: string
           lead_id: string
+          numero?: string | null
           occurred_at?: string
           responsavel?: string | null
           resumo_ai?: string | null
           source?: string | null
         }
         Update: {
+          channel_id?: string | null
           created_at?: string
           external_id?: string | null
           external_url?: string | null
           id?: string
           lead_id?: string
+          numero?: string | null
           occurred_at?: string
           responsavel?: string | null
           resumo_ai?: string | null
           source?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "lead_conversations_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lead_conversations_lead_id_fkey"
             columns: ["lead_id"]
@@ -262,6 +370,7 @@ export type Database = {
           ai_ultima_analise: string | null
           aula_experimental_em: string | null
           cargo: string | null
+          channel_id: string | null
           conversation_next_action: string | null
           conversation_notes: string | null
           conversation_summary: string | null
@@ -300,6 +409,7 @@ export type Database = {
           ai_ultima_analise?: string | null
           aula_experimental_em?: string | null
           cargo?: string | null
+          channel_id?: string | null
           conversation_next_action?: string | null
           conversation_notes?: string | null
           conversation_summary?: string | null
@@ -338,6 +448,7 @@ export type Database = {
           ai_ultima_analise?: string | null
           aula_experimental_em?: string | null
           cargo?: string | null
+          channel_id?: string | null
           conversation_next_action?: string | null
           conversation_notes?: string | null
           conversation_summary?: string | null
@@ -364,7 +475,15 @@ export type Database = {
           valor?: number | null
           whatsapp?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "leads_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -501,6 +620,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "member"
+      channel_status: "online" | "offline" | "conectando" | "erro"
+      channel_type: "evolution" | "meta_cloud"
       history_type:
         | "created"
         | "status_change"
@@ -666,6 +787,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "member"],
+      channel_status: ["online", "offline", "conectando", "erro"],
+      channel_type: ["evolution", "meta_cloud"],
       history_type: [
         "created",
         "status_change",
