@@ -77,6 +77,7 @@ export interface Lead {
   follow_up_em: string | null;
   ultima_interacao_em: string | null;
   aguardando_resposta: boolean;
+  channel_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
