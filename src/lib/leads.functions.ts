@@ -26,6 +26,7 @@ const leadInputSchema = z.object({
   aula_experimental_em: z.string().nullish(),
   follow_up_em: z.string().nullish(),
   aguardando_resposta: z.boolean().optional(),
+  channel_id: z.string().uuid().nullish(),
 });
 
 function clean<T>(v: T | "" | null | undefined): T | null {
