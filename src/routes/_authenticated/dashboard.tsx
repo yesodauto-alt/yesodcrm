@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { dashboardStats, sdrStats } from "@/lib/leads.functions";
 import { taskStats } from "@/lib/tasks.functions";
+import { channelsHealth } from "@/lib/channels.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { STATUS_LABELS, STATUS_COLORS, LEAD_STATUSES, TASK_PRIORITY_COLORS, TASK_PRIORITY_LABELS } from "@/lib/types";
-import { Users, TrendingUp, Handshake, Trophy, XCircle, Sparkles, ListTodo, AlertTriangle, Clock, Flame, CalendarClock, MessageCircleQuestion } from "lucide-react";
+import { Users, TrendingUp, Handshake, Trophy, XCircle, Sparkles, ListTodo, AlertTriangle, Clock, Flame, CalendarClock, MessageCircleQuestion, Radio } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
@@ -20,9 +21,11 @@ function Dashboard() {
   const fetchStats = useServerFn(dashboardStats);
   const fetchTaskStats = useServerFn(taskStats);
   const fetchSdrStats = useServerFn(sdrStats);
+  const fetchChannelsHealth = useServerFn(channelsHealth);
   const { data } = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats() });
   const { data: tstats } = useQuery({ queryKey: ["task-stats"], queryFn: () => fetchTaskStats() });
   const { data: sstats } = useQuery({ queryKey: ["sdr-stats"], queryFn: () => fetchSdrStats() });
+  const { data: chealth } = useQuery({ queryKey: ["channels-health"], queryFn: () => fetchChannelsHealth() });
 
   const kpis = [
     { label: "Total de Leads", value: data?.total ?? 0, icon: Users, color: "text-foreground" },
@@ -52,6 +55,33 @@ function Dashboard() {
             <SdrKpi icon={<CalendarClock className="h-4 w-4 text-emerald-500" />} label="Aulas Experimentais" value={sstats?.aulasHoje ?? 0} />
             <SdrKpi icon={<MessageCircleQuestion className="h-4 w-4 text-purple-500" />} label="Sem resposta" value={sstats?.semResposta ?? 0} />
             <SdrKpi icon={<ListTodo className="h-4 w-4 text-cyan-500" />} label="Tarefas Pendentes" value={sstats?.tarefasPendentes ?? 0} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Radio className="h-4 w-4 text-emerald-500" />
+            Saúde dos Canais
+            <Link to="/channels" className="ml-auto text-xs text-muted-foreground hover:underline">Gerenciar →</Link>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <SdrKpi icon={<Radio className="h-4 w-4 text-emerald-500" />} label="Online" value={chealth?.online ?? 0} />
+            <SdrKpi icon={<Radio className="h-4 w-4 text-muted-foreground" />} label="Offline" value={chealth?.offline ?? 0} />
+            <SdrKpi icon={<MessageCircleQuestion className="h-4 w-4 text-purple-500" />} label="Mensagens hoje" value={chealth?.mensagensHoje ?? 0} />
+            <div className="p-3 rounded-md border">
+              <div className="text-xs text-muted-foreground">Tempo médio de resposta</div>
+              <div className="mt-1 text-sm font-medium">Integração pendente</div>
+            </div>
+            <div className="p-3 rounded-md border">
+              <div className="text-xs text-muted-foreground">Última sincronização</div>
+              <div className="mt-1 text-sm font-medium">
+                {chealth?.lastSync ? format(new Date(chealth.lastSync), "dd/MM HH:mm", { locale: ptBR }) : "—"}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

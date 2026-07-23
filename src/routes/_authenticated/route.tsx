@@ -34,6 +34,7 @@ const items = [
   { title: "Fila SDR", url: "/queue", icon: Flame },
   { title: "Leads", url: "/leads", icon: Users },
   { title: "Contatos", url: "/contacts", icon: Contact },
+  { title: "Canais", url: "/channels", icon: Radio },
   { title: "Pipeline", url: "/pipeline", icon: KanbanSquare },
   { title: "Configurações", url: "/settings", icon: Settings },
   { title: "Perfil", url: "/profile", icon: User },
