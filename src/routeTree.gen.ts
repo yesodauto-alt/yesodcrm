@@ -19,6 +19,7 @@ import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
+import { Route as AuthenticatedChannelsRouteImport } from './routes/_authenticated/channels'
 import { Route as ApiPublicLeadsIndexRouteImport } from './routes/api/public/leads/index'
 import { Route as ApiPublicWebhooksUpdateTaskRouteImport } from './routes/api/public/webhooks/update-task'
 import { Route as ApiPublicWebhooksUpdateLeadRouteImport } from './routes/api/public/webhooks/update-lead'
@@ -26,6 +27,7 @@ import { Route as ApiPublicWebhooksUpdateContactRouteImport } from './routes/api
 import { Route as ApiPublicWebhooksNewTaskRouteImport } from './routes/api/public/webhooks/new-task'
 import { Route as ApiPublicWebhooksNewLeadRouteImport } from './routes/api/public/webhooks/new-lead'
 import { Route as ApiPublicWebhooksNewContactRouteImport } from './routes/api/public/webhooks/new-contact'
+import { Route as ApiPublicWebhooksChannelStatusRouteImport } from './routes/api/public/webhooks/channel-status'
 import { Route as ApiPublicWebhooksAiAnalysisRouteImport } from './routes/api/public/webhooks/ai-analysis'
 import { Route as ApiPublicLeadsIdStatusRouteImport } from './routes/api/public/leads/$id/status'
 import { Route as ApiPublicLeadsIdNoteRouteImport } from './routes/api/public/leads/$id/note'
@@ -79,6 +81,11 @@ const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
   path: '/contacts',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedChannelsRoute = AuthenticatedChannelsRouteImport.update({
+  id: '/channels',
+  path: '/channels',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicLeadsIndexRoute = ApiPublicLeadsIndexRouteImport.update({
   id: '/api/public/leads/',
   path: '/api/public/leads/',
@@ -120,6 +127,12 @@ const ApiPublicWebhooksNewContactRoute =
     path: '/api/public/webhooks/new-contact',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicWebhooksChannelStatusRoute =
+  ApiPublicWebhooksChannelStatusRouteImport.update({
+    id: '/api/public/webhooks/channel-status',
+    path: '/api/public/webhooks/channel-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhooksAiAnalysisRoute =
   ApiPublicWebhooksAiAnalysisRouteImport.update({
     id: '/api/public/webhooks/ai-analysis',
@@ -140,6 +153,7 @@ const ApiPublicLeadsIdNoteRoute = ApiPublicLeadsIdNoteRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/channels': typeof AuthenticatedChannelsRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/leads': typeof AuthenticatedLeadsRoute
@@ -148,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/queue': typeof AuthenticatedQueueRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
+  '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
   '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
@@ -161,6 +176,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/channels': typeof AuthenticatedChannelsRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/leads': typeof AuthenticatedLeadsRoute
@@ -169,6 +185,7 @@ export interface FileRoutesByTo {
   '/queue': typeof AuthenticatedQueueRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
+  '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
   '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
@@ -184,6 +201,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/channels': typeof AuthenticatedChannelsRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
@@ -192,6 +210,7 @@ export interface FileRoutesById {
   '/_authenticated/queue': typeof AuthenticatedQueueRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
+  '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
   '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
@@ -207,6 +226,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/channels'
     | '/contacts'
     | '/dashboard'
     | '/leads'
@@ -215,6 +235,7 @@ export interface FileRouteTypes {
     | '/queue'
     | '/settings'
     | '/api/public/webhooks/ai-analysis'
+    | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
     | '/api/public/webhooks/new-task'
@@ -228,6 +249,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/channels'
     | '/contacts'
     | '/dashboard'
     | '/leads'
@@ -236,6 +258,7 @@ export interface FileRouteTypes {
     | '/queue'
     | '/settings'
     | '/api/public/webhooks/ai-analysis'
+    | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
     | '/api/public/webhooks/new-task'
@@ -250,6 +273,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/channels'
     | '/_authenticated/contacts'
     | '/_authenticated/dashboard'
     | '/_authenticated/leads'
@@ -258,6 +282,7 @@ export interface FileRouteTypes {
     | '/_authenticated/queue'
     | '/_authenticated/settings'
     | '/api/public/webhooks/ai-analysis'
+    | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
     | '/api/public/webhooks/new-task'
@@ -274,6 +299,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicWebhooksAiAnalysisRoute: typeof ApiPublicWebhooksAiAnalysisRoute
+  ApiPublicWebhooksChannelStatusRoute: typeof ApiPublicWebhooksChannelStatusRoute
   ApiPublicWebhooksNewContactRoute: typeof ApiPublicWebhooksNewContactRoute
   ApiPublicWebhooksNewLeadRoute: typeof ApiPublicWebhooksNewLeadRoute
   ApiPublicWebhooksNewTaskRoute: typeof ApiPublicWebhooksNewTaskRoute
@@ -357,6 +383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContactsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/channels': {
+      id: '/_authenticated/channels'
+      path: '/channels'
+      fullPath: '/channels'
+      preLoaderRoute: typeof AuthenticatedChannelsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/leads/': {
       id: '/api/public/leads/'
       path: '/api/public/leads'
@@ -406,6 +439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksNewContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhooks/channel-status': {
+      id: '/api/public/webhooks/channel-status'
+      path: '/api/public/webhooks/channel-status'
+      fullPath: '/api/public/webhooks/channel-status'
+      preLoaderRoute: typeof ApiPublicWebhooksChannelStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/ai-analysis': {
       id: '/api/public/webhooks/ai-analysis'
       path: '/api/public/webhooks/ai-analysis'
@@ -431,6 +471,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedChannelsRoute: typeof AuthenticatedChannelsRoute
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
@@ -441,6 +482,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedChannelsRoute: AuthenticatedChannelsRoute,
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
@@ -458,6 +500,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicWebhooksAiAnalysisRoute: ApiPublicWebhooksAiAnalysisRoute,
+  ApiPublicWebhooksChannelStatusRoute: ApiPublicWebhooksChannelStatusRoute,
   ApiPublicWebhooksNewContactRoute: ApiPublicWebhooksNewContactRoute,
   ApiPublicWebhooksNewLeadRoute: ApiPublicWebhooksNewLeadRoute,
   ApiPublicWebhooksNewTaskRoute: ApiPublicWebhooksNewTaskRoute,
