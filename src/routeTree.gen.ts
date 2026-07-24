@@ -15,16 +15,20 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedQueueRouteImport } from './routes/_authenticated/queue'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedPrioritiesRouteImport } from './routes/_authenticated/priorities'
 import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedConversationsRouteImport } from './routes/_authenticated/conversations'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
 import { Route as AuthenticatedChannelsRouteImport } from './routes/_authenticated/channels'
 import { Route as ApiPublicLeadsIndexRouteImport } from './routes/api/public/leads/index'
+import { Route as ApiPublicWebhooksUpsertConversationRouteImport } from './routes/api/public/webhooks/upsert-conversation'
 import { Route as ApiPublicWebhooksUpdateTaskRouteImport } from './routes/api/public/webhooks/update-task'
 import { Route as ApiPublicWebhooksUpdateLeadRouteImport } from './routes/api/public/webhooks/update-lead'
 import { Route as ApiPublicWebhooksUpdateContactRouteImport } from './routes/api/public/webhooks/update-contact'
 import { Route as ApiPublicWebhooksNewTaskRouteImport } from './routes/api/public/webhooks/new-task'
+import { Route as ApiPublicWebhooksNewMessageRouteImport } from './routes/api/public/webhooks/new-message'
 import { Route as ApiPublicWebhooksNewLeadRouteImport } from './routes/api/public/webhooks/new-lead'
 import { Route as ApiPublicWebhooksNewContactRouteImport } from './routes/api/public/webhooks/new-contact'
 import { Route as ApiPublicWebhooksChannelStatusRouteImport } from './routes/api/public/webhooks/channel-status'
@@ -61,6 +65,11 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPrioritiesRoute = AuthenticatedPrioritiesRouteImport.update({
+  id: '/priorities',
+  path: '/priorities',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPipelineRoute = AuthenticatedPipelineRouteImport.update({
   id: '/pipeline',
   path: '/pipeline',
@@ -76,6 +85,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedConversationsRoute =
+  AuthenticatedConversationsRouteImport.update({
+    id: '/conversations',
+    path: '/conversations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
   id: '/contacts',
   path: '/contacts',
@@ -91,6 +106,12 @@ const ApiPublicLeadsIndexRoute = ApiPublicLeadsIndexRouteImport.update({
   path: '/api/public/leads/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWebhooksUpsertConversationRoute =
+  ApiPublicWebhooksUpsertConversationRouteImport.update({
+    id: '/api/public/webhooks/upsert-conversation',
+    path: '/api/public/webhooks/upsert-conversation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhooksUpdateTaskRoute =
   ApiPublicWebhooksUpdateTaskRouteImport.update({
     id: '/api/public/webhooks/update-task',
@@ -113,6 +134,12 @@ const ApiPublicWebhooksNewTaskRoute =
   ApiPublicWebhooksNewTaskRouteImport.update({
     id: '/api/public/webhooks/new-task',
     path: '/api/public/webhooks/new-task',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicWebhooksNewMessageRoute =
+  ApiPublicWebhooksNewMessageRouteImport.update({
+    id: '/api/public/webhooks/new-message',
+    path: '/api/public/webhooks/new-message',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicWebhooksNewLeadRoute =
@@ -155,9 +182,11 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/channels': typeof AuthenticatedChannelsRoute
   '/contacts': typeof AuthenticatedContactsRoute
+  '/conversations': typeof AuthenticatedConversationsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
+  '/priorities': typeof AuthenticatedPrioritiesRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/queue': typeof AuthenticatedQueueRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -165,10 +194,12 @@ export interface FileRoutesByFullPath {
   '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
+  '/api/public/webhooks/new-message': typeof ApiPublicWebhooksNewMessageRoute
   '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
   '/api/public/webhooks/update-contact': typeof ApiPublicWebhooksUpdateContactRoute
   '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
   '/api/public/webhooks/update-task': typeof ApiPublicWebhooksUpdateTaskRoute
+  '/api/public/webhooks/upsert-conversation': typeof ApiPublicWebhooksUpsertConversationRoute
   '/api/public/leads/': typeof ApiPublicLeadsIndexRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
@@ -178,9 +209,11 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/channels': typeof AuthenticatedChannelsRoute
   '/contacts': typeof AuthenticatedContactsRoute
+  '/conversations': typeof AuthenticatedConversationsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
+  '/priorities': typeof AuthenticatedPrioritiesRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/queue': typeof AuthenticatedQueueRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -188,10 +221,12 @@ export interface FileRoutesByTo {
   '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
+  '/api/public/webhooks/new-message': typeof ApiPublicWebhooksNewMessageRoute
   '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
   '/api/public/webhooks/update-contact': typeof ApiPublicWebhooksUpdateContactRoute
   '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
   '/api/public/webhooks/update-task': typeof ApiPublicWebhooksUpdateTaskRoute
+  '/api/public/webhooks/upsert-conversation': typeof ApiPublicWebhooksUpsertConversationRoute
   '/api/public/leads': typeof ApiPublicLeadsIndexRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
@@ -203,9 +238,11 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/channels': typeof AuthenticatedChannelsRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
+  '/_authenticated/conversations': typeof AuthenticatedConversationsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
   '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
+  '/_authenticated/priorities': typeof AuthenticatedPrioritiesRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/queue': typeof AuthenticatedQueueRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -213,10 +250,12 @@ export interface FileRoutesById {
   '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
   '/api/public/webhooks/new-lead': typeof ApiPublicWebhooksNewLeadRoute
+  '/api/public/webhooks/new-message': typeof ApiPublicWebhooksNewMessageRoute
   '/api/public/webhooks/new-task': typeof ApiPublicWebhooksNewTaskRoute
   '/api/public/webhooks/update-contact': typeof ApiPublicWebhooksUpdateContactRoute
   '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
   '/api/public/webhooks/update-task': typeof ApiPublicWebhooksUpdateTaskRoute
+  '/api/public/webhooks/upsert-conversation': typeof ApiPublicWebhooksUpsertConversationRoute
   '/api/public/leads/': typeof ApiPublicLeadsIndexRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
@@ -228,9 +267,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/channels'
     | '/contacts'
+    | '/conversations'
     | '/dashboard'
     | '/leads'
     | '/pipeline'
+    | '/priorities'
     | '/profile'
     | '/queue'
     | '/settings'
@@ -238,10 +279,12 @@ export interface FileRouteTypes {
     | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
+    | '/api/public/webhooks/new-message'
     | '/api/public/webhooks/new-task'
     | '/api/public/webhooks/update-contact'
     | '/api/public/webhooks/update-lead'
     | '/api/public/webhooks/update-task'
+    | '/api/public/webhooks/upsert-conversation'
     | '/api/public/leads/'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
@@ -251,9 +294,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/channels'
     | '/contacts'
+    | '/conversations'
     | '/dashboard'
     | '/leads'
     | '/pipeline'
+    | '/priorities'
     | '/profile'
     | '/queue'
     | '/settings'
@@ -261,10 +306,12 @@ export interface FileRouteTypes {
     | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
+    | '/api/public/webhooks/new-message'
     | '/api/public/webhooks/new-task'
     | '/api/public/webhooks/update-contact'
     | '/api/public/webhooks/update-lead'
     | '/api/public/webhooks/update-task'
+    | '/api/public/webhooks/upsert-conversation'
     | '/api/public/leads'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
@@ -275,9 +322,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/channels'
     | '/_authenticated/contacts'
+    | '/_authenticated/conversations'
     | '/_authenticated/dashboard'
     | '/_authenticated/leads'
     | '/_authenticated/pipeline'
+    | '/_authenticated/priorities'
     | '/_authenticated/profile'
     | '/_authenticated/queue'
     | '/_authenticated/settings'
@@ -285,10 +334,12 @@ export interface FileRouteTypes {
     | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
     | '/api/public/webhooks/new-lead'
+    | '/api/public/webhooks/new-message'
     | '/api/public/webhooks/new-task'
     | '/api/public/webhooks/update-contact'
     | '/api/public/webhooks/update-lead'
     | '/api/public/webhooks/update-task'
+    | '/api/public/webhooks/upsert-conversation'
     | '/api/public/leads/'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
@@ -302,10 +353,12 @@ export interface RootRouteChildren {
   ApiPublicWebhooksChannelStatusRoute: typeof ApiPublicWebhooksChannelStatusRoute
   ApiPublicWebhooksNewContactRoute: typeof ApiPublicWebhooksNewContactRoute
   ApiPublicWebhooksNewLeadRoute: typeof ApiPublicWebhooksNewLeadRoute
+  ApiPublicWebhooksNewMessageRoute: typeof ApiPublicWebhooksNewMessageRoute
   ApiPublicWebhooksNewTaskRoute: typeof ApiPublicWebhooksNewTaskRoute
   ApiPublicWebhooksUpdateContactRoute: typeof ApiPublicWebhooksUpdateContactRoute
   ApiPublicWebhooksUpdateLeadRoute: typeof ApiPublicWebhooksUpdateLeadRoute
   ApiPublicWebhooksUpdateTaskRoute: typeof ApiPublicWebhooksUpdateTaskRoute
+  ApiPublicWebhooksUpsertConversationRoute: typeof ApiPublicWebhooksUpsertConversationRoute
   ApiPublicLeadsIndexRoute: typeof ApiPublicLeadsIndexRoute
   ApiPublicLeadsIdNoteRoute: typeof ApiPublicLeadsIdNoteRoute
   ApiPublicLeadsIdStatusRoute: typeof ApiPublicLeadsIdStatusRoute
@@ -355,6 +408,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/priorities': {
+      id: '/_authenticated/priorities'
+      path: '/priorities'
+      fullPath: '/priorities'
+      preLoaderRoute: typeof AuthenticatedPrioritiesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pipeline': {
       id: '/_authenticated/pipeline'
       path: '/pipeline'
@@ -376,6 +436,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/conversations': {
+      id: '/_authenticated/conversations'
+      path: '/conversations'
+      fullPath: '/conversations'
+      preLoaderRoute: typeof AuthenticatedConversationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/contacts': {
       id: '/_authenticated/contacts'
       path: '/contacts'
@@ -395,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/leads'
       fullPath: '/api/public/leads/'
       preLoaderRoute: typeof ApiPublicLeadsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/upsert-conversation': {
+      id: '/api/public/webhooks/upsert-conversation'
+      path: '/api/public/webhooks/upsert-conversation'
+      fullPath: '/api/public/webhooks/upsert-conversation'
+      preLoaderRoute: typeof ApiPublicWebhooksUpsertConversationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/update-task': {
@@ -423,6 +497,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/webhooks/new-task'
       fullPath: '/api/public/webhooks/new-task'
       preLoaderRoute: typeof ApiPublicWebhooksNewTaskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/new-message': {
+      id: '/api/public/webhooks/new-message'
+      path: '/api/public/webhooks/new-message'
+      fullPath: '/api/public/webhooks/new-message'
+      preLoaderRoute: typeof ApiPublicWebhooksNewMessageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/new-lead': {
@@ -473,9 +554,11 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedChannelsRoute: typeof AuthenticatedChannelsRoute
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
+  AuthenticatedConversationsRoute: typeof AuthenticatedConversationsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
   AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
+  AuthenticatedPrioritiesRoute: typeof AuthenticatedPrioritiesRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedQueueRoute: typeof AuthenticatedQueueRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -484,9 +567,11 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedChannelsRoute: AuthenticatedChannelsRoute,
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
+  AuthenticatedConversationsRoute: AuthenticatedConversationsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
   AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
+  AuthenticatedPrioritiesRoute: AuthenticatedPrioritiesRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedQueueRoute: AuthenticatedQueueRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
@@ -503,10 +588,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicWebhooksChannelStatusRoute: ApiPublicWebhooksChannelStatusRoute,
   ApiPublicWebhooksNewContactRoute: ApiPublicWebhooksNewContactRoute,
   ApiPublicWebhooksNewLeadRoute: ApiPublicWebhooksNewLeadRoute,
+  ApiPublicWebhooksNewMessageRoute: ApiPublicWebhooksNewMessageRoute,
   ApiPublicWebhooksNewTaskRoute: ApiPublicWebhooksNewTaskRoute,
   ApiPublicWebhooksUpdateContactRoute: ApiPublicWebhooksUpdateContactRoute,
   ApiPublicWebhooksUpdateLeadRoute: ApiPublicWebhooksUpdateLeadRoute,
   ApiPublicWebhooksUpdateTaskRoute: ApiPublicWebhooksUpdateTaskRoute,
+  ApiPublicWebhooksUpsertConversationRoute:
+    ApiPublicWebhooksUpsertConversationRoute,
   ApiPublicLeadsIndexRoute: ApiPublicLeadsIndexRoute,
   ApiPublicLeadsIdNoteRoute: ApiPublicLeadsIdNoteRoute,
   ApiPublicLeadsIdStatusRoute: ApiPublicLeadsIdStatusRoute,
