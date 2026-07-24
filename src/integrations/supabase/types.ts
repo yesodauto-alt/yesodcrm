@@ -185,43 +185,58 @@ export type Database = {
       }
       lead_conversations: {
         Row: {
+          assigned_user_id: string | null
           channel_id: string | null
+          contact_id: string | null
           created_at: string
           external_id: string | null
           external_url: string | null
           id: string
+          last_message_at: string | null
           lead_id: string
           numero: string | null
           occurred_at: string
           responsavel: string | null
           resumo_ai: string | null
           source: string | null
+          status: string
+          unidade: string | null
         }
         Insert: {
+          assigned_user_id?: string | null
           channel_id?: string | null
+          contact_id?: string | null
           created_at?: string
           external_id?: string | null
           external_url?: string | null
           id?: string
+          last_message_at?: string | null
           lead_id: string
           numero?: string | null
           occurred_at?: string
           responsavel?: string | null
           resumo_ai?: string | null
           source?: string | null
+          status?: string
+          unidade?: string | null
         }
         Update: {
+          assigned_user_id?: string | null
           channel_id?: string | null
+          contact_id?: string | null
           created_at?: string
           external_id?: string | null
           external_url?: string | null
           id?: string
+          last_message_at?: string | null
           lead_id?: string
           numero?: string | null
           occurred_at?: string
           responsavel?: string | null
           resumo_ai?: string | null
           source?: string | null
+          status?: string
+          unidade?: string | null
         }
         Relationships: [
           {
@@ -229,6 +244,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {
@@ -312,6 +334,60 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "lead_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          direction: string
+          external_id: string | null
+          id: string
+          lead_id: string | null
+          sender: string | null
+          sent_at: string
+          status: string | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          direction: string
+          external_id?: string | null
+          id?: string
+          lead_id?: string | null
+          sender?: string | null
+          sent_at?: string
+          status?: string | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          external_id?: string | null
+          id?: string
+          lead_id?: string | null
+          sender?: string | null
+          sent_at?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "lead_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_messages_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
