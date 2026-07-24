@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { LEAD_STATUSES } from "@/lib/types";
+import { LEAD_STATUSES, LEAD_TEMPERATURAS } from "@/lib/types";
+
 
 const schema = z.object({
   id: z.string().uuid().optional(),
@@ -26,6 +27,16 @@ const schema = z.object({
     conversation_next_action: z.string().nullable().optional(),
     conversation_notes: z.string().nullable().optional(),
     channel_id: z.string().uuid().nullable().optional(),
+    temperatura: z.enum(LEAD_TEMPERATURAS).nullable().optional(),
+    aula_experimental_em: z.string().nullable().optional(),
+    follow_up_em: z.string().nullable().optional(),
+    aguardando_resposta: z.boolean().optional(),
+    ultima_interacao_em: z.string().nullable().optional(),
+    ai_temperatura_sugerida: z.enum(LEAD_TEMPERATURAS).nullable().optional(),
+    ai_motivo: z.string().nullable().optional(),
+    ai_interesses: z.array(z.string()).optional(),
+    ai_objecoes: z.array(z.string()).optional(),
+    ai_proxima_acao: z.string().nullable().optional(),
   }),
 });
 
