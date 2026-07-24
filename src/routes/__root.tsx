@@ -82,9 +82,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Yesod CRM" },
       { name: "description", content: "CRM integrado ao n8n para gestão de leads da Yesod Automation" },
       { property: "og:title", content: "Yesod CRM" },
-      { property: "og:description", content: "CRM integrado ao n8n para gestão de leads" },
+      { property: "og:description", content: "CRM integrado ao n8n para gestão de leads da Yesod Automation" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Yesod CRM" },
+      { name: "twitter:description", content: "CRM integrado ao n8n para gestão de leads da Yesod Automation" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7c448838-fb91-4f45-a031-8a220a491e3a/id-preview-5b538dfe--23a61e87-dd3f-4974-839e-86e6fbe32221.lovable.app-1784861797315.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7c448838-fb91-4f45-a031-8a220a491e3a/id-preview-5b538dfe--23a61e87-dd3f-4974-839e-86e6fbe32221.lovable.app-1784861797315.png" },
     ],
     links: [
       {
