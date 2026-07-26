@@ -13,7 +13,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, KanbanSquare, Settings, User, LogOut, Moon, Sun, Contact, Flame, Radio, MessageSquare, ListChecks } from "lucide-react";
+import { LayoutDashboard, Users, KanbanSquare, Settings, User, LogOut, Moon, Sun, Contact, Flame, Radio, MessageSquare, ListChecks, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { GlobalSearch } from "@/components/global-search";
@@ -24,29 +24,57 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+
+    // Busca o role e a unidade do usuário logado
+    const [roleRes, profileRes] = await Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", data.user.id).single(),
+      supabase.from("profiles").select("unidade, full_name").eq("id", data.user.id).single(),
+    ]);
+
+    const role = (roleRes.data?.role as string) || "agente";
+    const unidade = profileRes.data?.unidade || null;
+    const fullName = profileRes.data?.full_name || data.user.email;
+
+    return { user: data.user, role, unidade, fullName };
   },
   component: AuthLayout,
 });
 
-const items = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Prioridades", url: "/priorities", icon: ListChecks },
-  { title: "Fila SDR", url: "/queue", icon: Flame },
-  { title: "Conversas", url: "/conversations", icon: MessageSquare },
-  { title: "Leads", url: "/leads", icon: Users },
-  { title: "Contatos", url: "/contacts", icon: Contact },
-  { title: "Canais", url: "/channels", icon: Radio },
-  { title: "Pipeline", url: "/pipeline", icon: KanbanSquare },
-  { title: "Configurações", url: "/settings", icon: Settings },
-  { title: "Perfil", url: "/profile", icon: User },
+// Todos os itens de menu com controle de acesso por role
+const allItems = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["super_admin", "admin", "agente"] },
+  { title: "Prioridades", url: "/priorities", icon: ListChecks, roles: ["super_admin", "admin", "agente"] },
+  { title: "Fila SDR", url: "/queue", icon: Flame, roles: ["super_admin", "admin", "agente"] },
+  { title: "Conversas", url: "/conversations", icon: MessageSquare, roles: ["super_admin", "admin", "agente"] },
+  { title: "Leads", url: "/leads", icon: Users, roles: ["super_admin", "admin", "agente"] },
+  { title: "Contatos", url: "/contacts", icon: Contact, roles: ["super_admin", "admin", "agente"] },
+  { title: "Canais", url: "/channels", icon: Radio, roles: ["super_admin", "admin"] },
+  { title: "Pipeline", url: "/pipeline", icon: KanbanSquare, roles: ["super_admin", "admin"] },
+  { title: "Configurações", url: "/settings", icon: Settings, roles: ["super_admin"] },
+  { title: "Perfil", url: "/profile", icon: User, roles: ["super_admin", "admin", "agente"] },
 ];
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  agente: "Agente",
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  super_admin: "text-purple-500",
+  admin: "text-blue-500",
+  agente: "text-emerald-500",
+};
 
 function AuthLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { role, unidade, fullName } = Route.useRouteContext();
   const [dark, setDark] = useState(false);
+
+  // Filtra os itens de menu conforme o role do usuário
+  const items = allItems.filter((item) => item.roles.includes(role));
 
   useEffect(() => {
     const saved = localStorage.getItem("theme") === "dark";
@@ -83,7 +111,21 @@ function AuthLayout() {
               </div>
             </div>
           </SidebarHeader>
+
           <SidebarContent>
+            {/* Badge do role do usuário */}
+            <div className="px-3 py-2 group-data-[collapsible=icon]:hidden">
+              <div className="flex items-center gap-1.5 text-xs">
+                <ShieldCheck className={`h-3.5 w-3.5 ${ROLE_COLORS[role] || "text-muted-foreground"}`} />
+                <span className={`font-medium ${ROLE_COLORS[role] || "text-muted-foreground"}`}>
+                  {ROLE_LABELS[role] || role}
+                </span>
+                {unidade && (
+                  <span className="text-muted-foreground">· {unidade}</span>
+                )}
+              </div>
+            </div>
+
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -101,7 +143,11 @@ function AuthLayout() {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
+
           <SidebarFooter>
+            <div className="px-2 py-1 group-data-[collapsible=icon]:hidden">
+              <p className="text-xs text-muted-foreground truncate">{fullName}</p>
+            </div>
             <Button variant="ghost" size="sm" onClick={logout} className="justify-start">
               <LogOut className="h-4 w-4" />
               <span className="group-data-[collapsible=icon]:hidden">Sair</span>
