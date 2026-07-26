@@ -28,12 +28,12 @@ function Dashboard() {
   const { data: chealth } = useQuery({ queryKey: ["channels-health"], queryFn: () => fetchChannelsHealth() });
 
   const kpis = [
-    { label: "Total de Leads", value: data?.total ?? 0, icon: Users, color: "text-foreground" },
-    { label: "Novos", value: data?.byStatus?.novo ?? 0, icon: Sparkles, color: "text-blue-500" },
-    { label: "Em Atendimento", value: (data?.byStatus?.contato ?? 0) + (data?.byStatus?.diagnostico ?? 0), icon: TrendingUp, color: "text-purple-500" },
-    { label: "Propostas", value: (data?.byStatus?.proposta ?? 0) + (data?.byStatus?.negociacao ?? 0), icon: Handshake, color: "text-orange-500" },
-    { label: "Ganhos", value: data?.byStatus?.ganho ?? 0, icon: Trophy, color: "text-emerald-500" },
-    { label: "Perdidos", value: data?.byStatus?.perdido ?? 0, icon: XCircle, color: "text-rose-500" },
+    { label: "Total de Leads", value: data?.total ?? 0, icon: Users, color: "text-foreground", search: {} },
+    { label: "Novos", value: data?.byStatus?.novo ?? 0, icon: Sparkles, color: "text-blue-500", search: { status: "novo" } },
+    { label: "Em Atendimento", value: (data?.byStatus?.contato ?? 0) + (data?.byStatus?.diagnostico ?? 0), icon: TrendingUp, color: "text-purple-500", search: { status: "contato" } },
+    { label: "Propostas", value: (data?.byStatus?.proposta ?? 0) + (data?.byStatus?.negociacao ?? 0), icon: Handshake, color: "text-orange-500", search: { status: "proposta" } },
+    { label: "Ganhos", value: data?.byStatus?.ganho ?? 0, icon: Trophy, color: "text-emerald-500", search: { status: "ganho" } },
+    { label: "Perdidos", value: data?.byStatus?.perdido ?? 0, icon: XCircle, color: "text-rose-500", search: { status: "perdido" } },
   ];
 
   const chartData = LEAD_STATUSES.map((s) => ({ name: STATUS_LABELS[s], value: data?.byStatus?.[s] ?? 0 }));
@@ -46,15 +46,20 @@ function Dashboard() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Flame className="h-4 w-4 text-rose-500" />Painel do SDR</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Flame className="h-4 w-4 text-rose-500" />
+            Painel do SDR
+          </CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <SdrKpi icon={<Sparkles className="h-4 w-4 text-blue-500" />} label="Leads Novos" value={sstats?.novos ?? 0} />
-            <SdrKpi icon={<Flame className="h-4 w-4 text-rose-500" />} label="Leads Quentes" value={sstats?.quentes ?? 0} />
-            <SdrKpi icon={<Clock className="h-4 w-4 text-amber-500" />} label="Follow-ups Pendentes" value={sstats?.followUps ?? 0} />
-            <SdrKpi icon={<CalendarClock className="h-4 w-4 text-emerald-500" />} label="Aulas Experimentais" value={sstats?.aulasHoje ?? 0} />
-            <SdrKpi icon={<MessageCircleQuestion className="h-4 w-4 text-purple-500" />} label="Sem resposta" value={sstats?.semResposta ?? 0} />
-            <SdrKpi icon={<ListTodo className="h-4 w-4 text-cyan-500" />} label="Tarefas Pendentes" value={sstats?.tarefasPendentes ?? 0} />
+            <SdrKpi icon={<Sparkles className="h-4 w-4 text-blue-500" />} label="Leads Novos" value={sstats?.novos ?? 0} search={{ status: "novo" }} />
+            <SdrKpi icon={<Flame className="h-4 w-4 text-rose-500" />} label="Leads Quentes" value={sstats?.quentes ?? 0} search={{ temperatura: "quente" }} />
+            <SdrKpi icon={<Clock className="h-4 w-4 text-amber-500" />} label="Follow-ups Pendentes" value={sstats?.followUps ?? 0} search={{ follow_up: "pending" }} />
+            <SdrKpi icon={<CalendarClock className="h-4 w-4 text-emerald-500" />} label="Aulas Experimentais" value={sstats?.aulasHoje ?? 0} search={{ aula: "today" }} />
+            <SdrKpi icon={<MessageCircleQuestion className="h-4 w-4 text-purple-500" />} label="Sem resposta" value={sstats?.semResposta ?? 0} search={{ aguardando: "true" }} />
+            <SdrKpi icon={<ListTodo className="h-4 w-4 text-cyan-500" />} label="Tarefas Pendentes" value={sstats?.tarefasPendentes ?? 0} search={{ tarefas: "pendente" }} />
           </div>
         </CardContent>
       </Card>
@@ -88,15 +93,17 @@ function Dashboard() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {kpis.map((k) => (
-          <Card key={k.label}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <k.icon className={`h-4 w-4 ${k.color}`} />
-              </div>
-              <div className="mt-2 text-2xl font-semibold">{k.value}</div>
-              <div className="text-xs text-muted-foreground">{k.label}</div>
-            </CardContent>
-          </Card>
+          <Link key={k.label} to="/leads" search={k.search as any} className="block">
+            <Card className="hover:shadow-md hover:border-primary/50 transition-all cursor-pointer h-full">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <k.icon className={`h-4 w-4 ${k.color}`} />
+                </div>
+                <div className="mt-2 text-2xl font-semibold">{k.value}</div>
+                <div className="text-xs text-muted-foreground">{k.label}</div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
@@ -155,6 +162,7 @@ function Dashboard() {
             <Row label="Atrasadas" value={tstats?.atrasadas ?? 0} icon={<AlertTriangle className="h-3.5 w-3.5 text-rose-500" />} />
           </CardContent>
         </Card>
+
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" />Próximas atividades</CardTitle></CardHeader>
           <CardContent className="space-y-2">
@@ -191,11 +199,19 @@ function Row({ label, value, icon }: { label: string; value: number; icon?: Reac
   );
 }
 
-function SdrKpi({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return (
-    <div className="p-3 rounded-md border">
+function SdrKpi({ icon, label, value, search }: { icon: React.ReactNode; label: string; value: number; search?: any }) {
+  const inner = (
+    <div className="p-3 rounded-md border hover:shadow-md hover:border-primary/50 transition-all">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</div>
       <div className="mt-1 text-2xl font-semibold">{value}</div>
     </div>
   );
+  if (search) {
+    return (
+      <Link to="/leads" search={search} className="block">
+        {inner}
+      </Link>
+    );
+  }
+  return inner;
 }
