@@ -83,6 +83,7 @@ export function LeadForm({
       : "",
     aguardando_resposta: initial?.aguardando_resposta ?? false,
   });
+
   const [tagInput, setTagInput] = useState("");
 
   function set<K extends keyof LeadFormValues>(k: K, val: LeadFormValues[K]) {
@@ -93,8 +94,31 @@ export function LeadForm({
     ? format(new Date(initial.conversation_summary_updated_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
     : null;
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    onSubmit({
+      ...v,
+      aula_experimental_em: v.aula_experimental_em || null,
+      follow_up_em: v.follow_up_em || null,
+      empresa: v.empresa || null,
+      cargo: v.cargo || null,
+      email: v.email || null,
+      telefone: v.telefone || null,
+      whatsapp: v.whatsapp || null,
+      origem: v.origem || null,
+      unidade: v.unidade || null,
+      interesse: v.interesse || null,
+      objetivo: v.objetivo || null,
+      responsavel: v.responsavel || null,
+      observacoes: v.observacoes || null,
+      conversation_summary: v.conversation_summary || null,
+      conversation_next_action: v.conversation_next_action || null,
+      conversation_notes: v.conversation_notes || null,
+    });
+  }
+
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(v); }} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Informações Gerais */}
       <Card>
         <CardHeader className="pb-3">
@@ -174,7 +198,6 @@ export function LeadForm({
               />
             </Field>
           </div>
-
           <Field label="Objetivo">
             <Textarea
               rows={3}
@@ -184,8 +207,6 @@ export function LeadForm({
               className="font-medium"
             />
           </Field>
-
-
           <Field label="Tags">
             <div className="flex gap-2">
               <Input
@@ -216,7 +237,6 @@ export function LeadForm({
               </div>
             )}
           </Field>
-
           <Field label="Observações">
             <Textarea rows={3} value={v.observacoes ?? ""} onChange={(e) => set("observacoes", e.target.value)} />
           </Field>
@@ -314,4 +334,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
-
