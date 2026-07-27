@@ -27,8 +27,12 @@ interface SupportTicket {
   team_id: string | null;
   created_at: string;
   updated_at: string;
-  created_by_profile?: { full_name: string | null; email: string | null };
-  assigned_to_profile?: { full_name: string | null; email: string | null };
+}
+
+interface UserProfile {
+  id: string;
+  full_name: string | null;
+  email: string | null;
 }
 
 const STATUS_CONFIG = {
@@ -48,6 +52,7 @@ const PRIORITY_CONFIG = {
 function SupportPage() {
   const [mounted, setMounted] = useState(false);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [userProfiles, setUserProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -66,19 +71,61 @@ function SupportPage() {
     setMounted(true);
   }, []);
 
+  async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
+    // Verifica cache primeiro
+    if (userProfiles.has(userId)) {
+      return userProfiles.get(userId) || null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.warn(`Erro ao buscar perfil ${userId}:`, error);
+        return null;
+      }
+
+      // Atualiza cache
+      setUserProfiles(prev => new Map(prev).set(userId, data));
+      return data;
+    } catch (err) {
+      console.warn(`Erro ao buscar perfil ${userId}:`, err);
+      return null;
+    }
+  }
+
   async function fetchTickets() {
     try {
       setLoading(true);
-      const { data: userData } = await supabase.auth.getUser();
       
-      let query = supabase
+      // Busca os tickets
+      const { data, error } = await supabase
         .from("support_tickets")
-        .select("*, created_by_profile:profiles!created_by(full_name, email), assigned_to_profile:profiles!assigned_to(full_name, email)")
+        .select("*")
         .order("created_at", { ascending: false });
 
-      const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao buscar chamados:", error);
+        toast.error("Erro ao carregar chamados");
+        setTickets([]);
+        return;
+      }
+
       setTickets(data || []);
+
+      // Busca os perfis dos usuários criadores e atribuídos
+      const userIds = new Set<string>();
+      (data || []).forEach(ticket => {
+        userIds.add(ticket.created_by);
+        if (ticket.assigned_to) userIds.add(ticket.assigned_to);
+      });
+
+      // Busca todos os perfis em paralelo
+      await Promise.all(Array.from(userIds).map(userId => fetchUserProfile(userId)));
     } catch (err) {
       console.error("Erro ao buscar chamados:", err);
       toast.error("Erro ao carregar chamados");
@@ -171,6 +218,11 @@ function SupportPage() {
     open: tickets.filter((t) => t.status === "open").length,
     inProgress: tickets.filter((t) => t.status === "in_progress").length,
     resolved: tickets.filter((t) => t.status === "resolved").length,
+  };
+
+  const getCreatorName = (userId: string) => {
+    const profile = userProfiles.get(userId);
+    return profile?.full_name || profile?.email || "Desconhecido";
   };
 
   return (
@@ -344,7 +396,7 @@ function SupportPage() {
                           </div>
                           <p className="text-sm text-muted-foreground truncate">{ticket.description}</p>
                           <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                            <span>Por: {ticket.created_by_profile?.full_name || "Desconhecido"}</span>
+                            <span>Por: {getCreatorName(ticket.created_by)}</span>
                             <span>•</span>
                             <span>{new Date(ticket.created_at).toLocaleDateString("pt-BR")}</span>
                           </div>
@@ -358,18 +410,18 @@ function SupportPage() {
 
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
-                        <DialogTitle>Detalhes do Chamado</DialogTitle>
+                        <DialogTitle>{selectedTicket?.subject}</DialogTitle>
                       </DialogHeader>
                       {selectedTicket && (
                         <div className="space-y-6">
                           <div>
-                            <h3 className="font-semibold mb-2">{selectedTicket.subject}</h3>
-                            <p className="text-sm text-muted-foreground">{selectedTicket.description}</p>
+                            <h4 className="text-sm font-medium mb-2">Descrição</h4>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedTicket.description}</p>
                           </div>
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="text-xs font-semibold text-muted-foreground">Status</label>
+                              <label className="text-sm font-medium">Status</label>
                               <Select value={selectedTicket.status} onValueChange={(value) => updateTicketStatus(selectedTicket.id, value)}>
                                 <SelectTrigger className="mt-1">
                                   <SelectValue />
@@ -382,23 +434,34 @@ function SupportPage() {
                                 </SelectContent>
                               </Select>
                             </div>
+
                             <div>
-                              <label className="text-xs font-semibold text-muted-foreground">Prioridade</label>
-                              <div className="mt-1">
-                                <Badge className={PRIORITY_CONFIG[selectedTicket.priority].color}>{PRIORITY_CONFIG[selectedTicket.priority].label}</Badge>
-                              </div>
+                              <label className="text-sm font-medium">Prioridade</label>
+                              <Select value={selectedTicket.priority} onValueChange={(value) => {
+                                setSelectedTicket({ ...selectedTicket, priority: value as any });
+                              }}>
+                                <SelectTrigger className="mt-1">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="low">Baixa</SelectItem>
+                                  <SelectItem value="medium">Média</SelectItem>
+                                  <SelectItem value="high">Alta</SelectItem>
+                                  <SelectItem value="urgent">Urgente</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <label className="text-xs font-semibold text-muted-foreground">Criado por</label>
-                              <p className="mt-1">{selectedTicket.created_by_profile?.full_name || "Desconhecido"}</p>
-                            </div>
-                            <div>
-                              <label className="text-xs font-semibold text-muted-foreground">Data de Criação</label>
-                              <p className="mt-1">{new Date(selectedTicket.created_at).toLocaleDateString("pt-BR")}</p>
-                            </div>
+                          <div>
+                            <label className="text-sm font-medium">Criado por</label>
+                            <p className="text-sm text-muted-foreground mt-1">{getCreatorName(selectedTicket.created_by)}</p>
+                          </div>
+
+                          <div className="flex gap-2 pt-4">
+                            <Button variant="outline" onClick={() => setShowTicketDetailDialog(false)}>
+                              Fechar
+                            </Button>
                           </div>
                         </div>
                       )}

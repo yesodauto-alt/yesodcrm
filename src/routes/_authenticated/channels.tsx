@@ -11,16 +11,16 @@ export const Route = createFileRoute("/_authenticated/channels")({
 
 interface Channel {
   id: string;
-  name: string;
-  whatsapp_number: string | null;
-  connection_type: string;
+  nome: string;
+  numero: string | null;
+  tipo: string;
   status: string;
-  unit: string | null;
-  responsible: string | null;
-  active: boolean;
+  unidades: string[] | null;
+  responsavel: string | null;
+  ativo: boolean;
   webhook_url: string | null;
-  api_token: string | null;
-  description: string | null;
+  token: string | null;
+  descricao: string | null;
 }
 
 function ChannelsPage() {
@@ -38,7 +38,10 @@ function ChannelsPage() {
 
   async function fetchChannels() {
     setLoading(true);
-    const { data } = await supabase.from("channels").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("channels").select("*").order("created_at", { ascending: false });
+    if (error) {
+      console.error("Erro ao buscar canais:", error);
+    }
     setChannels(data || []);
     setLoading(false);
   }
@@ -57,12 +60,26 @@ function ChannelsPage() {
       });
       const createData = await createRes.json();
 
+      if (!createRes.ok) {
+        setConnectionStatus(`Erro ao criar instância: ${createData.error || createData.message}`);
+        console.error("Erro na criação:", createData);
+        setQrLoading(false);
+        return;
+      }
+
       // Passo 2: Conectar e pegar QR Code
       setConnectionStatus("Gerando QR Code...");
       const connectRes = await fetch(`/api/evolution-proxy?action=connect&instanceName=${instanceName}`, {
         method: "POST",
       });
       const connectData = await connectRes.json();
+
+      if (!connectRes.ok) {
+        setConnectionStatus(`Erro ao gerar QR Code: ${connectData.error || connectData.message}`);
+        console.error("Erro na conexão:", connectData);
+        setQrLoading(false);
+        return;
+      }
 
       if (connectData?.qrcode) {
         // QR Code vem como base64
@@ -73,7 +90,7 @@ function ChannelsPage() {
         setConnectionStatus("Escaneie o QR Code com seu WhatsApp");
 
         // Atualiza status no banco
-        await supabase.from("channels").update({ status: "connecting" }).eq("id", channel.id);
+        await supabase.from("channels").update({ status: "conectando" }).eq("id", channel.id);
 
         // Inicia polling de status
         pollConnectionStatus(instanceName, channel.id);
@@ -210,8 +227,8 @@ function ChannelsPage() {
                       <Radio className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">{channel.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{channel.whatsapp_number || "Sem número"}</p>
+                      <CardTitle className="text-base">{channel.nome}</CardTitle>
+                      <p className="text-sm text-muted-foreground">{channel.numero || "Sem número"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -221,7 +238,7 @@ function ChannelsPage() {
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <XCircle className="h-4 w-4" /> Offline
+                        <XCircle className="h-4 w-4" /> {channel.status === "conectando" ? "Conectando..." : "Offline"}
                       </span>
                     )}
                   </div>
@@ -244,8 +261,8 @@ function ChannelsPage() {
                     Editar
                   </Button>
                 </div>
-                {channel.connection_type && (
-                  <p className="text-xs text-muted-foreground mt-3">Tipo: {channel.connection_type}</p>
+                {channel.tipo && (
+                  <p className="text-xs text-muted-foreground mt-3">Tipo: {channel.tipo === "evolution" ? "Evolution API" : "Meta Cloud"}</p>
                 )}
               </CardContent>
             </Card>
@@ -271,24 +288,36 @@ function ChannelModal({ channel, onClose, onSaved }: {
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    name: channel?.name || "",
-    whatsapp_number: channel?.whatsapp_number || "",
-    connection_type: channel?.connection_type || "Evolution API",
-    unit: channel?.unit || "",
-    responsible: channel?.responsible || "",
-    active: channel?.active ?? true,
+    nome: channel?.nome || "",
+    numero: channel?.numero || "",
+    tipo: channel?.tipo || "evolution",
+    unidades: channel?.unidades?.join(", ") || "",
+    responsavel: channel?.responsavel || "",
+    ativo: channel?.ativo ?? true,
     webhook_url: channel?.webhook_url || "",
-    api_token: channel?.api_token || "",
-    description: channel?.description || "",
+    token: channel?.token || "",
+    descricao: channel?.descricao || "",
   });
   const [saving, setSaving] = useState(false);
 
   async function save() {
     setSaving(true);
+    const payload = {
+      nome: form.nome,
+      numero: form.numero || null,
+      tipo: form.tipo,
+      unidades: form.unidades ? form.unidades.split(",").map(u => u.trim()) : [],
+      responsavel: form.responsavel || null,
+      ativo: form.ativo,
+      webhook_url: form.webhook_url || null,
+      token: form.token || null,
+      descricao: form.descricao || null,
+    };
+
     if (channel) {
-      await supabase.from("channels").update(form).eq("id", channel.id);
+      await supabase.from("channels").update(payload).eq("id", channel.id);
     } else {
-      await supabase.from("channels").insert({ ...form, status: "offline" });
+      await supabase.from("channels").insert({ ...payload, status: "offline" });
     }
     setSaving(false);
     onSaved();
@@ -305,8 +334,8 @@ function ChannelModal({ channel, onClose, onSaved }: {
             <label className="text-sm font-medium">Nome do canal</label>
             <input
               className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              value={form.nome}
+              onChange={(e) => setForm({ ...form, nome: e.target.value })}
               placeholder="Ex: WhatsApp Principal"
             />
           </div>
@@ -314,25 +343,28 @@ function ChannelModal({ channel, onClose, onSaved }: {
             <label className="text-sm font-medium">Número do WhatsApp</label>
             <input
               className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.whatsapp_number}
-              onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
+              value={form.numero}
+              onChange={(e) => setForm({ ...form, numero: e.target.value })}
               placeholder="+55 11 90000-0000"
             />
           </div>
           <div>
             <label className="text-sm font-medium">Tipo de conexão</label>
-            <input
+            <select
               className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.connection_type}
-              onChange={(e) => setForm({ ...form, connection_type: e.target.value })}
-            />
+              value={form.tipo}
+              onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+            >
+              <option value="evolution">Evolution API</option>
+              <option value="meta_cloud">Meta Cloud</option>
+            </select>
           </div>
           <div>
             <label className="text-sm font-medium">Unidades (separe por vírgula)</label>
             <input
               className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.unit}
-              onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              value={form.unidades}
+              onChange={(e) => setForm({ ...form, unidades: e.target.value })}
               placeholder="Matriz, Filial 1"
             />
           </div>
@@ -340,8 +372,8 @@ function ChannelModal({ channel, onClose, onSaved }: {
             <label className="text-sm font-medium">Responsável</label>
             <input
               className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.responsible}
-              onChange={(e) => setForm({ ...form, responsible: e.target.value })}
+              value={form.responsavel}
+              onChange={(e) => setForm({ ...form, responsavel: e.target.value })}
             />
           </div>
           <div>
@@ -357,8 +389,8 @@ function ChannelModal({ channel, onClose, onSaved }: {
             <label className="text-sm font-medium">Token / API Key</label>
             <input
               className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.api_token}
-              onChange={(e) => setForm({ ...form, api_token: e.target.value })}
+              value={form.token}
+              onChange={(e) => setForm({ ...form, token: e.target.value })}
               placeholder="Token da Evolution API"
             />
           </div>
@@ -366,23 +398,23 @@ function ChannelModal({ channel, onClose, onSaved }: {
             <label className="text-sm font-medium">Descrição</label>
             <textarea
               className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              value={form.descricao}
+              onChange={(e) => setForm({ ...form, descricao: e.target.value })}
               rows={2}
             />
           </div>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              checked={form.active}
-              onChange={(e) => setForm({ ...form, active: e.target.checked })}
+              checked={form.ativo}
+              onChange={(e) => setForm({ ...form, ativo: e.target.checked })}
             />
             <span className="text-sm">Ativo</span>
           </label>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
-            <Button className="flex-1" onClick={save} disabled={saving || !form.name}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar canal"}
+            <Button className="flex-1" onClick={save} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar"}
             </Button>
           </div>
         </CardContent>
