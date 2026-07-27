@@ -25,13 +25,20 @@ export const Route = createFileRoute("/_authenticated")({
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
     
-    // Normaliza o role para evitar erros de hífen ou underline
-    const rawRole = data.user.app_metadata?.role || "agente";
-    const role = rawRole.replace("-", "_");
+    // Lógica de Hierarquia: Identifica a Camila pelo ID e garante Super Admin
+    // Para outros, lê o role do metadado ou assume 'agente'
+    let role = data.user.app_metadata?.role || "agente";
+    
+    if (data.user.id === '708c38d6-5a01-4a73-875e-db33f6a8ee73') {
+      role = 'super_admin';
+    }
+    
+    // Normaliza para evitar erros de hífen/underline
+    const normalizedRole = role.replace("-", "_");
     
     return { 
       user: data.user,
-      role: role
+      role: normalizedRole
     };
   },
   component: AuthLayout,
@@ -63,6 +70,7 @@ function AuthLayout() {
     document.documentElement.classList.toggle("dark", saved);
   }, []);
 
+  // Filtra os itens do menu com base no nível de acesso (Role)
   const menuItems = allItems.filter(item => item.roles.includes(role));
 
   function toggleTheme() {
@@ -86,11 +94,13 @@ function AuthLayout() {
           <SidebarHeader className="border-b">
             <div className="flex items-center gap-2 px-2 py-1">
               <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold">
-                {role === "super_admin" ? <ShieldCheck className="h-5 w-5" /> : "Y"}
+                {role === "super_admin" ? <ShieldCheck className="h-5 w-5 text-yellow-400" /> : "Y"}
               </div>
               <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                <span className="text-sm font-semibold">Yesod CRM</span>
-                <span className="text-xs text-muted-foreground capitalize">{role.replace("_", " ")}</span>
+                <span className="text-sm font-semibold text-white">Yesod CRM</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                  {role.replace("_", " ")}
+                </span>
               </div>
             </div>
           </SidebarHeader>
@@ -102,7 +112,7 @@ function AuthLayout() {
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={pathname.startsWith(item.url)}>
                         <Link to={item.url}>
-                          <item.icon />
+                          <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
@@ -112,25 +122,27 @@ function AuthLayout() {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
-          <SidebarFooter>
-            <Button variant="ghost" size="sm" onClick={logout} className="justify-start w-full px-2">
+          <SidebarFooter className="border-t p-2">
+            <Button variant="ghost" size="sm" onClick={logout} className="justify-start w-full text-red-400 hover:text-red-300 hover:bg-red-900/20">
               <LogOut className="h-4 w-4 mr-2" />
-              <span className="group-data-[collapsible=icon]:hidden">Sair</span>
+              <span className="group-data-[collapsible=icon]:hidden">Sair do Sistema</span>
             </Button>
           </SidebarFooter>
         </Sidebar>
 
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 border-b bg-background flex items-center gap-3 px-4 sticky top-0 z-10">
+          <header className="h-14 border-b bg-background/95 backdrop-blur flex items-center gap-3 px-4 sticky top-0 z-10">
             <SidebarTrigger />
             <div className="flex-1 max-w-md">
               <GlobalSearch />
             </div>
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
+            <div className="flex items-center gap-2 ml-auto">
+              <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full">
+                {dark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
+              </Button>
+            </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
+          <main className="flex-1 p-4 md:p-6 overflow-x-hidden bg-background">
             <Outlet />
           </main>
         </div>
