@@ -13,7 +13,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, KanbanSquare, Settings, User, LogOut, Moon, Sun, Contact, Flame, Radio, MessageSquare, ListChecks, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Users, KanbanSquare, Settings, User, LogOut, Moon, Sun, Contact, Flame, Radio, MessageSquare, ListChecks, ShieldCheck, FileText, Users2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { GlobalSearch } from "@/components/global-search";
@@ -25,7 +25,16 @@ export const Route = createFileRoute("/_authenticated")({
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
     
-    let role = data.user.app_metadata?.role || "agente";
+    // Tenta buscar a role da tabela profiles
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('default_role')
+      .eq('id', data.user.id)
+      .single();
+
+    let role = profile?.default_role || data.user.app_metadata?.role || "agente";
+    
+    // Hardcode mantido para garantir acesso super_admin se necessário
     if (data.user.id === '708c38d6-5a01-4a73-875e-db33f6a8ee73') {
       role = 'super_admin';
     }
@@ -47,6 +56,8 @@ const allItems = [
   { title: "Contatos", url: "/contacts", icon: Contact, roles: ["super_admin", "admin", "agente"] },
   { title: "Canais", url: "/channels", icon: Radio, roles: ["super_admin", "admin"] },
   { title: "Pipeline", url: "/pipeline", icon: KanbanSquare, roles: ["super_admin", "admin", "agente"] },
+  { title: "Equipes", url: "/teams", icon: Users2, roles: ["super_admin", "admin"] },
+  { title: "Templates", url: "/templates", icon: FileText, roles: ["super_admin", "admin", "agente"] },
   { title: "Configurações", url: "/settings", icon: Settings, roles: ["super_admin"] },
   { title: "Perfil", url: "/profile", icon: User, roles: ["super_admin", "admin", "agente"] },
 ];
@@ -114,7 +125,7 @@ function AuthLayout() {
             </SidebarGroup>
           </SidebarContent>
           <SidebarFooter className="border-t border-border p-4">
-            <Button variant="ghost" size="sm" onClick={logout} className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-colors">
+            <Button variant="ghost" size="sm" onClick={logout} className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg">
               <LogOut className="h-4 w-4 mr-2" />
               <span className="group-data-[collapsible=icon]:hidden font-semibold">Sair</span>
             </Button>
@@ -122,7 +133,7 @@ function AuthLayout() {
         </Sidebar>
 
         <div className="flex-1 flex flex-col min-w-0 bg-background">
-          <header className="h-16 border-b border-border bg-background/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-50">
+          <header className="h-16 border-b border-border bg-background/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10">
             <div className="flex items-center gap-4 flex-1">
               <SidebarTrigger className="hover:bg-accent rounded-md p-2" />
               <div className="w-full max-w-md hidden md:block">
@@ -130,13 +141,16 @@ function AuthLayout() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" onClick={toggleTheme} className="rounded-full border-border hover:bg-accent transition-transform duration-300 hover:rotate-12">
-                {dark ? <Sun className="h-[1.2rem] w-[1.2rem] text-yellow-500" /> : <Moon className="h-[1.2rem] w-[1.2rem] text-slate-700" />}
+              <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full hover:bg-accent">
+                {dark ? <Sun className="h-5 w-5 text-yellow-500" /> : <Moon className="h-5 w-5 text-slate-700" />}
               </Button>
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                <User className="h-4 w-4 text-primary" />
+              </div>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="max-w-[1600px] mx-auto p-6 animate-in fade-in duration-500">
+          <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
               <Outlet />
             </div>
           </main>
