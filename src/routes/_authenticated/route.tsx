@@ -25,9 +25,21 @@ export const Route = createFileRoute("/_authenticated")({
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
 
-    const role = (data.user.user_metadata?.role as string) || "agente";
-    const unidade = (data.user.user_metadata?.unidade as string) || null;
-    const fullName = (data.user.user_metadata?.full_name as string) || data.user.email || "Usuário";
+    // Chama a função do banco que bypassa o RLS
+    const { data: roleData } = await supabase
+      .rpc("get_current_user_role", { user_uuid: data.user.id });
+
+    const role = (roleData as string) || "agente";
+
+    // Busca perfil (também via RPC seria ideal, mas vamos tentar direto)
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("unidade, full_name")
+      .eq("id", data.user.id)
+      .single();
+
+    const unidade = profileData?.unidade || null;
+    const fullName = profileData?.full_name || data.user.email || "Usuário";
 
     return { user: data.user, role, unidade, fullName };
   },
