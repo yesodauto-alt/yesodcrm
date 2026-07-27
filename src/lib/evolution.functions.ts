@@ -13,13 +13,39 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
     const url = process.env.EVOLUTION_API_URL;
     const key = process.env.EVOLUTION_API_KEY;
 
-    if (!url || !key) throw new Error("Evolution API não configurada.");
+    if (!url || !key) {
+      console.error("Evolution API não configurada no ambiente.");
+      throw new Error("Evolution API não configurada.");
+    }
 
-    const response = await fetch(`${url}/message/sendText/${data.instance}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': key },
-      body: JSON.stringify({ number: data.number, text: data.text })
-    });
+    try {
+      // Limpa o número para garantir que tenha apenas dígitos
+      const cleanNumber = data.number.replace(/\D/g, '');
+      
+      const response = await fetch(`${url}/message/sendText/${data.instance}`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'apikey': key 
+        },
+        body: JSON.stringify({ 
+          number: cleanNumber, 
+          text: data.text,
+          delay: 1200, // Adiciona um pequeno delay para evitar bloqueios
+          linkPreview: false
+        })
+      });
 
-    return await response.json();
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Erro na Evolution API:", result);
+        throw new Error(result.message || `Erro ${response.status} ao enviar mensagem.`);
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Falha ao enviar mensagem WhatsApp:", error);
+      throw error;
+    }
   });
