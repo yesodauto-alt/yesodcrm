@@ -25,19 +25,51 @@ export const Route = createFileRoute("/_authenticated")({
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
 
-    const { data: roleData } = await supabase
-      .rpc("get_current_user_role", { user_uuid: data.user.id });
+    let role = "agente";
 
-    const role = (roleData as string) || "agente";
+    // Metodo 1: RPC (bypassa RLS)
+    try {
+      const { data: roleData } = await supabase
+        .rpc("get_current_user_role", { user_uuid: data.user.id });
+      if (Array.isArray(roleData) && roleData.length > 0) {
+        role = (roleData[0] as any).role || "agente";
+      } else if (typeof roleData === "string") {
+        role = roleData;
+      }
+    } catch {}
 
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("unidade, full_name")
-      .eq("id", data.user.id)
-      .single();
+    // Metodo 2: query direta
+    if (role === "agente") {
+      try {
+        const { data: roleRow } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+        if (roleRow?.role) role = roleRow.role;
+      } catch {}
+    }
 
-    const unidade = profileData?.unidade || null;
-    const fullName = profileData?.full_name || data.user.email || "Usuário";
+    // Metodo 3: user_metadata
+    if (role === "agente") {
+      const metaRole = data.user.user_metadata?.role as string;
+      if (metaRole) role = metaRole;
+    }
+
+    let unidade: string | null = null;
+    let fullName = data.user.email || "Usuario";
+
+    try {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("unidade, full_name")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      if (profileData) {
+        unidade = profileData.unidade || null;
+        fullName = profileData.full_name || fullName;
+      }
+    } catch {}
 
     return { user: data.user, role, unidade, fullName };
   },
