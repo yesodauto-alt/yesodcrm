@@ -1,534 +1,392 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import {
-  listChannels,
-  createChannel,
-  updateChannel,
-  toggleChannelActive,
-  deleteChannel,
-  testChannelConnection,
-  getChannel,
-  CHANNEL_TYPES,
-  CHANNEL_STATUSES,
-} from "@/lib/channels.functions";
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
-import {
-  Plus,
-  Radio,
-  Trash2,
-  Zap,
-  PowerOff,
-  Power,
-  RefreshCw,
-} from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Radio, Plus, QrCode, RefreshCw, Trash2, Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/channels")({
-  head: () => ({
-    meta: [
-      { title: "Canais WhatsApp — Yesod CRM" },
-      { name: "description", content: "Central omnichannel de canais WhatsApp." },
-    ],
-  }),
   component: ChannelsPage,
 });
 
-const TYPE_LABELS: Record<string, string> = {
-  evolution: "Evolution API",
-  meta_cloud: "Meta Cloud API",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  online: "Online",
-  offline: "Offline",
-  conectando: "Conectando",
-  erro: "Erro",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  online: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  offline: "bg-muted text-muted-foreground border-muted",
-  conectando: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  erro: "bg-rose-500/10 text-rose-500 border-rose-500/20",
-};
-
-type FormState = {
-  id?: string;
-  nome: string;
-  numero: string;
-  tipo: (typeof CHANNEL_TYPES)[number];
-  status: (typeof CHANNEL_STATUSES)[number];
-  descricao: string;
-  webhook_url: string;
-  token: string;
-  unidades: string;
-  responsavel: string;
-  ativo: boolean;
-};
-
-const EMPTY: FormState = {
-  nome: "",
-  numero: "",
-  tipo: "evolution",
-  status: "offline",
-  descricao: "",
-  webhook_url: "",
-  token: "",
-  unidades: "",
-  responsavel: "",
-  ativo: true,
-};
+interface Channel {
+  id: string;
+  name: string;
+  whatsapp_number: string | null;
+  connection_type: string;
+  status: string;
+  unit: string | null;
+  responsible: string | null;
+  active: boolean;
+  webhook_url: string | null;
+  api_token: string | null;
+  description: string | null;
+}
 
 function ChannelsPage() {
-  const qc = useQueryClient();
-  const fetchList = useServerFn(listChannels);
-  const create = useServerFn(createChannel);
-  const update = useServerFn(updateChannel);
-  const toggle = useServerFn(toggleChannelActive);
-  const del = useServerFn(deleteChannel);
-  const test = useServerFn(testChannelConnection);
-  const fetchDetail = useServerFn(getChannel);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<string>("");
+  const [showModal, setShowModal] = useState(false);
+  const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
 
-  const { data: channels = [] } = useQuery({
-    queryKey: ["channels"],
-    queryFn: () => fetchList(),
-  });
+  useEffect(() => {
+    fetchChannels();
+  }, []);
 
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<FormState>(EMPTY);
-  const [detailId, setDetailId] = useState<string | null>(null);
-
-  const { data: detail } = useQuery({
-    queryKey: ["channel", detailId],
-    queryFn: () => fetchDetail({ data: { id: detailId! } }),
-    enabled: !!detailId,
-  });
-
-  const saveMut = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        nome: form.nome,
-        numero: form.numero,
-        tipo: form.tipo,
-        status: form.status,
-        descricao: form.descricao,
-        webhook_url: form.webhook_url,
-        token: form.token,
-        unidades: form.unidades
-          .split(",")
-          .map((u) => u.trim())
-          .filter(Boolean),
-        responsavel: form.responsavel,
-        ativo: form.ativo,
-      };
-      if (form.id) return update({ data: { id: form.id, ...payload } as any });
-      return create({ data: payload as any });
-    },
-    onSuccess: () => {
-      toast.success(form.id ? "Canal atualizado" : "Canal criado");
-      setOpen(false);
-      setForm(EMPTY);
-      qc.invalidateQueries({ queryKey: ["channels"] });
-      qc.invalidateQueries({ queryKey: ["channels-health"] });
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  const toggleMut = useMutation({
-    mutationFn: (v: { id: string; ativo: boolean }) => toggle({ data: v }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["channels"] });
-      qc.invalidateQueries({ queryKey: ["channels-health"] });
-    },
-  });
-
-  const delMut = useMutation({
-    mutationFn: (id: string) => del({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Canal removido");
-      qc.invalidateQueries({ queryKey: ["channels"] });
-    },
-  });
-
-  const testMut = useMutation({
-    mutationFn: (id: string) => test({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Teste registrado no log");
-      qc.invalidateQueries({ queryKey: ["channel", detailId] });
-      qc.invalidateQueries({ queryKey: ["channels"] });
-    },
-  });
-
-  function openEdit(c: any) {
-    setForm({
-      id: c.id,
-      nome: c.nome ?? "",
-      numero: c.numero ?? "",
-      tipo: c.tipo ?? "evolution",
-      status: c.status ?? "offline",
-      descricao: c.descricao ?? "",
-      webhook_url: c.webhook_url ?? "",
-      token: c.token ?? "",
-      unidades: (c.unidades ?? []).join(", "),
-      responsavel: c.responsavel ?? "",
-      ativo: c.ativo ?? true,
-    });
-    setOpen(true);
+  async function fetchChannels() {
+    setLoading(true);
+    const { data } = await supabase.from("channels").select("*").order("created_at", { ascending: false });
+    setChannels(data || []);
+    setLoading(false);
   }
 
-  function openNew() {
-    setForm(EMPTY);
-    setOpen(true);
+  async function generateQR(channel: Channel) {
+    setQrLoading(true);
+    setQrCode(null);
+    setConnectionStatus("Criando instância...");
+
+    try {
+      // Passo 1: Criar instância na Evolution API
+      const instanceName = `yesod_${channel.id.substring(0, 8)}`;
+
+      const createRes = await fetch(`/api/evolution-proxy?action=create&instanceName=${instanceName}`, {
+        method: "POST",
+      });
+      const createData = await createRes.json();
+
+      // Passo 2: Conectar e pegar QR Code
+      setConnectionStatus("Gerando QR Code...");
+      const connectRes = await fetch(`/api/evolution-proxy?action=connect&instanceName=${instanceName}`, {
+        method: "POST",
+      });
+      const connectData = await connectRes.json();
+
+      if (connectData?.qrcode) {
+        // QR Code vem como base64
+        const qr = connectData.qrcode.includes("base64,")
+          ? connectData.qrcode
+          : `data:image/png;base64,${connectData.qrcode}`;
+        setQrCode(qr);
+        setConnectionStatus("Escaneie o QR Code com seu WhatsApp");
+
+        // Atualiza status no banco
+        await supabase.from("channels").update({ status: "connecting" }).eq("id", channel.id);
+
+        // Inicia polling de status
+        pollConnectionStatus(instanceName, channel.id);
+      } else if (connectData?.base64) {
+        setQrCode(`data:image/png;base64,${connectData.base64}`);
+        setConnectionStatus("Escaneie o QR Code com seu WhatsApp");
+        pollConnectionStatus(instanceName, channel.id);
+      } else {
+        setConnectionStatus("Erro: QR Code não retornado pela Evolution API");
+        console.error("Resposta da Evolution API:", connectData);
+      }
+    } catch (error) {
+      setConnectionStatus("Erro ao gerar QR Code");
+      console.error(error);
+    }
+    setQrLoading(false);
+  }
+
+  async function pollConnectionStatus(instanceName: string, channelId: string) {
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutos
+
+    const interval = setInterval(async () => {
+      attempts++;
+      if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        setConnectionStatus("Tempo esgotado. Tente novamente.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/evolution-proxy?action=status&instanceName=${instanceName}`);
+        const data = await res.json();
+
+        if (data?.state === "open" || data?.status === "open") {
+          clearInterval(interval);
+          setConnectionStatus("WhatsApp conectado!");
+          setQrCode(null);
+          await supabase.from("channels").update({ status: "online" }).eq("id", channelId);
+          fetchChannels();
+        }
+      } catch {}
+    }, 5000);
+  }
+
+  async function disconnect(channel: Channel) {
+    if (!confirm("Desconectar este canal do WhatsApp?")) return;
+
+    const instanceName = `yesod_${channel.id.substring(0, 8)}`;
+    try {
+      await fetch(`/api/evolution-proxy?action=logout&instanceName=${instanceName}`, { method: "DELETE" });
+      await supabase.from("channels").update({ status: "offline" }).eq("id", channel.id);
+      fetchChannels();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao desconectar");
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Radio className="h-5 w-5 text-emerald-500" />
-            Canais WhatsApp
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Central omnichannel — gerencie múltiplos números simultaneamente.
-          </p>
+          <h1 className="text-2xl font-bold">Canais</h1>
+          <p className="text-sm text-muted-foreground">Gerencie suas conexões de WhatsApp</p>
         </div>
-        <Button onClick={openNew}>
-          <Plus className="h-4 w-4 mr-1" /> Novo canal
+        <Button onClick={() => { setEditingChannel(null); setShowModal(true); }}>
+          <Plus className="h-4 w-4" />
+          Novo Canal
         </Button>
       </div>
 
-      <Card>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Canal</TableHead>
-                <TableHead>Número</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Unidades</TableHead>
-                <TableHead>Última sinc.</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {channels.map((c: any) => (
-                <TableRow
-                  key={c.id}
-                  className="cursor-pointer"
-                  onClick={() => setDetailId(c.id)}
-                >
-                  <TableCell className="font-medium">
-                    {c.nome}
-                    {!c.ativo && (
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        Desativado
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{c.numero ?? "—"}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{TYPE_LABELS[c.tipo] ?? c.tipo}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={STATUS_COLORS[c.status]}>
-                      {STATUS_LABELS[c.status] ?? c.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {(c.unidades ?? []).join(", ") || "—"}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {c.last_sync_at
-                      ? format(new Date(c.last_sync_at), "dd/MM HH:mm", { locale: ptBR })
-                      : "—"}
-                  </TableCell>
-                  <TableCell
-                    className="text-right space-x-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Testar conexão"
-                      onClick={() => testMut.mutate(c.id)}
-                    >
-                      <Zap className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title={c.ativo ? "Desativar" : "Reativar"}
-                      onClick={() => toggleMut.mutate({ id: c.id, ativo: !c.ativo })}
-                    >
-                      {c.ativo ? (
-                        <PowerOff className="h-4 w-4" />
-                      ) : (
-                        <Power className="h-4 w-4 text-emerald-500" />
-                      )}
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        if (confirm("Remover este canal?")) delMut.mutate(c.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-rose-500" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {channels.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Nenhum canal cadastrado.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-
-      {/* Form drawer */}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{form.id ? "Editar canal" : "Novo canal"}</SheetTitle>
-          </SheetHeader>
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Nome do canal">
-              <Input
-                value={form.nome}
-                onChange={(e) => setForm({ ...form, nome: e.target.value })}
-              />
-            </Field>
-            <Field label="Número do WhatsApp">
-              <Input
-                value={form.numero}
-                onChange={(e) => setForm({ ...form, numero: e.target.value })}
-                placeholder="+55 11 90000-0000"
-              />
-            </Field>
-            <Field label="Tipo de conexão">
-              <Select
-                value={form.tipo}
-                onValueChange={(v) => setForm({ ...form, tipo: v as any })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHANNEL_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {TYPE_LABELS[t]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Status">
-              <Select
-                value={form.status}
-                onValueChange={(v) => setForm({ ...form, status: v as any })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHANNEL_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {STATUS_LABELS[s]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Unidades (separe por vírgula)" full>
-              <Input
-                value={form.unidades}
-                onChange={(e) => setForm({ ...form, unidades: e.target.value })}
-                placeholder="Unidade Centro, Unidade Sul"
-              />
-            </Field>
-            <Field label="Responsável">
-              <Input
-                value={form.responsavel}
-                onChange={(e) => setForm({ ...form, responsavel: e.target.value })}
-              />
-            </Field>
-            <Field label="Ativo">
-              <div className="flex items-center h-10">
-                <Switch
-                  checked={form.ativo}
-                  onCheckedChange={(v) => setForm({ ...form, ativo: v })}
-                />
-              </div>
-            </Field>
-            <Field label="Webhook URL" full>
-              <Input
-                value={form.webhook_url}
-                onChange={(e) => setForm({ ...form, webhook_url: e.target.value })}
-                placeholder="https://..."
-              />
-            </Field>
-            <Field label="Token / API Key" full>
-              <Input
-                type="password"
-                value={form.token}
-                onChange={(e) => setForm({ ...form, token: e.target.value })}
-              />
-            </Field>
-            <Field label="Descrição" full>
-              <Textarea
-                value={form.descricao}
-                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-                rows={3}
-              />
-            </Field>
-          </div>
-          <div className="mt-6 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
-              {saveMut.isPending ? "Salvando..." : "Salvar canal"}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Detail drawer with logs */}
-      <Sheet open={!!detailId} onOpenChange={(o) => !o && setDetailId(null)}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{detail?.channel?.nome ?? "Canal"}</SheetTitle>
-          </SheetHeader>
-          {detail?.channel && (
-            <div className="mt-4 space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className={STATUS_COLORS[detail.channel.status]}>
-                  {STATUS_LABELS[detail.channel.status]}
-                </Badge>
-                <Badge variant="outline">{TYPE_LABELS[detail.channel.tipo]}</Badge>
-                {detail.channel.numero && (
-                  <Badge variant="outline">{detail.channel.numero}</Badge>
-                )}
-              </div>
-              <Tabs defaultValue="info">
-                <TabsList>
-                  <TabsTrigger value="info">Informações</TabsTrigger>
-                  <TabsTrigger value="logs">Logs</TabsTrigger>
-                </TabsList>
-                <TabsContent value="info" className="mt-3 text-sm space-y-2">
-                  <Row k="Responsável" v={detail.channel.responsavel ?? "—"} />
-                  <Row
-                    k="Unidades"
-                    v={(detail.channel.unidades ?? []).join(", ") || "—"}
-                  />
-                  <Row k="Webhook" v={detail.channel.webhook_url ?? "—"} />
-                  <Row
-                    k="Última sincronização"
-                    v={
-                      detail.channel.last_sync_at
-                        ? format(new Date(detail.channel.last_sync_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
-                        : "—"
-                    }
-                  />
-                  <p className="text-muted-foreground pt-2">
-                    {detail.channel.descricao ?? ""}
-                  </p>
-                  <div className="pt-2 flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => openEdit(detail.channel)}>
-                      Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => testMut.mutate(detail.channel.id)}
-                    >
-                      <Zap className="h-3.5 w-3.5 mr-1" /> Testar conexão
-                    </Button>
-                  </div>
-                </TabsContent>
-                <TabsContent value="logs" className="mt-3">
-                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-                    {(detail.logs ?? []).map((l: any) => (
-                      <div key={l.id} className="p-2 rounded-md border text-xs">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline">{l.tipo}</Badge>
-                          <span className="text-muted-foreground">
-                            {format(new Date(l.created_at), "dd/MM HH:mm:ss", { locale: ptBR })}
-                          </span>
-                        </div>
-                        {l.descricao && <div className="mt-1">{l.descricao}</div>}
-                      </div>
-                    ))}
-                    {(detail.logs ?? []).length === 0 && (
-                      <p className="text-sm text-muted-foreground">Sem eventos registrados.</p>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
+      {/* QR Code Modal */}
+      {qrCode && (
+        <Card className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <CardContent className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full mx-4">
+            <h3 className="text-lg font-semibold text-center mb-4">Conectar WhatsApp</h3>
+            <div className="flex justify-center mb-4">
+              <img src={qrCode} alt="QR Code" className="w-64 h-64" />
             </div>
-          )}
-        </SheetContent>
-      </Sheet>
+            <p className="text-sm text-center text-muted-foreground mb-4">
+              {connectionStatus}
+            </p>
+            <p className="text-xs text-center text-muted-foreground mb-4">
+              Abra o WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho
+            </p>
+            <Button variant="outline" className="w-full" onClick={() => { setQrCode(null); setConnectionStatus(""); }}>
+              Fechar
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading QR */}
+      {qrLoading && (
+        <Card className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <CardContent className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full mx-4">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">{connectionStatus}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Lista de Canais */}
+      {channels.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Radio className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground mb-4">Nenhum canal configurado</p>
+            <Button onClick={() => { setEditingChannel(null); setShowModal(true); }}>
+              <Plus className="h-4 w-4" />
+              Criar primeiro canal
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {channels.map((channel) => (
+            <Card key={channel.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Radio className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">{channel.name}</CardTitle>
+                      <p className="text-sm text-muted-foreground">{channel.whatsapp_number || "Sem número"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {channel.status === "online" ? (
+                      <span className="flex items-center gap-1 text-xs text-green-500">
+                        <CheckCircle2 className="h-4 w-4" /> Online
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <XCircle className="h-4 w-4" /> Offline
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  {channel.status !== "online" ? (
+                    <Button size="sm" onClick={() => generateQR(channel)}>
+                      <QrCode className="h-4 w-4" />
+                      Gerar QR Code
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="destructive" onClick={() => disconnect(channel)}>
+                      <Trash2 className="h-4 w-4" />
+                      Desconectar
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => { setEditingChannel(channel); setShowModal(true); }}>
+                    Editar
+                  </Button>
+                </div>
+                {channel.connection_type && (
+                  <p className="text-xs text-muted-foreground mt-3">Tipo: {channel.connection_type}</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Modal de Editar/Criar */}
+      {showModal && (
+        <ChannelModal
+          channel={editingChannel}
+          onClose={() => { setShowModal(false); setEditingChannel(null); }}
+          onSaved={() => { setShowModal(false); setEditingChannel(null); fetchChannels(); }}
+        />
+      )}
     </div>
   );
 }
 
-function Field({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
-  return (
-    <div className={full ? "sm:col-span-2 space-y-1.5" : "space-y-1.5"}>
-      <Label className="text-xs">{label}</Label>
-      {children}
-    </div>
-  );
-}
+function ChannelModal({ channel, onClose, onSaved }: {
+  channel: Channel | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: channel?.name || "",
+    whatsapp_number: channel?.whatsapp_number || "",
+    connection_type: channel?.connection_type || "Evolution API",
+    unit: channel?.unit || "",
+    responsible: channel?.responsible || "",
+    active: channel?.active ?? true,
+    webhook_url: channel?.webhook_url || "",
+    api_token: channel?.api_token || "",
+    description: channel?.description || "",
+  });
+  const [saving, setSaving] = useState(false);
 
-function Row({ k, v }: { k: string; v: string }) {
+  async function save() {
+    setSaving(true);
+    if (channel) {
+      await supabase.from("channels").update(form).eq("id", channel.id);
+    } else {
+      await supabase.from("channels").insert({ ...form, status: "offline" });
+    }
+    setSaving(false);
+    onSaved();
+  }
+
   return (
-    <div className="flex items-start justify-between gap-3 py-1 border-b last:border-0">
-      <span className="text-muted-foreground">{k}</span>
-      <span className="text-right break-all">{v}</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <CardHeader>
+          <CardTitle>{channel ? "Editar canal" : "Novo canal"}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Nome do canal</label>
+            <input
+              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Ex: WhatsApp Principal"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Número do WhatsApp</label>
+            <input
+              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              value={form.whatsapp_number}
+              onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
+              placeholder="+55 11 90000-0000"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Tipo de conexão</label>
+            <input
+              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              value={form.connection_type}
+              onChange={(e) => setForm({ ...form, connection_type: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Unidades (separe por vírgula)</label>
+            <input
+              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              value={form.unit}
+              onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              placeholder="Matriz, Filial 1"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Responsável</label>
+            <input
+              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              value={form.responsible}
+              onChange={(e) => setForm({ ...form, responsible: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Webhook URL</label>
+            <input
+              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              value={form.webhook_url}
+              onChange={(e) => setForm({ ...form, webhook_url: e.target.value })}
+              placeholder="https://..."
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Token / API Key</label>
+            <input
+              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              value={form.api_token}
+              onChange={(e) => setForm({ ...form, api_token: e.target.value })}
+              placeholder="Token da Evolution API"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Descrição</label>
+            <textarea
+              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              rows={2}
+            />
+          </div>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => setForm({ ...form, active: e.target.checked })}
+            />
+            <span className="text-sm">Ativo</span>
+          </label>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
+            <Button className="flex-1" onClick={save} disabled={saving || !form.name}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar canal"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
