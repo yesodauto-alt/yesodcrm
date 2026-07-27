@@ -43,6 +43,7 @@ const ROLES = [
 ];
 
 function TeamsPage() {
+  const [mounted, setMounted] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
   const [members, setMembers] = useState<Record<string, TeamMember[]>>({});
   const [loading, setLoading] = useState(true);
@@ -54,44 +55,76 @@ function TeamsPage() {
   const [teamForm, setTeamForm] = useState({ name: "", description: "", unit_type: "sdr_team" });
   const [memberForm, setMemberForm] = useState({ user_email: "", role: "agente", is_lead: false });
 
+  // Previne erro de hidratação
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   async function fetchTeams() {
-    setLoading(true);
-    const { data } = await supabase.from("teams").select("*").order("name");
-    setTeams(data || []);
-    
-    if (data && data.length > 0 && !selectedTeam) {
-      setSelectedTeam(data[0].id);
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.from("teams").select("*").order("name");
+      
+      if (error) throw error;
+      
+      setTeams(data || []);
+      
+      if (data && data.length > 0 && !selectedTeam) {
+        setSelectedTeam(data[0].id);
+      }
+      
+      const membersMap: Record<string, TeamMember[]> = {};
+      for (const team of data || []) {
+        const { data: membs, error: mError } = await supabase
+          .from("team_members")
+          .select("*, profile:profiles(id, email, full_name)")
+          .eq("team_id", team.id)
+          .order("role");
+        
+        if (mError) console.error(`Erro ao buscar membros do time ${team.id}:`, mError);
+        membersMap[team.id] = membs || [];
+      }
+      setMembers(membersMap);
+    } catch (err) {
+      console.error("Erro ao buscar times:", err);
+    } finally {
+      setLoading(false);
     }
-    
-    const membersMap: Record<string, TeamMember[]> = {};
-    for (const team of data || []) {
-      const { data: membs } = await supabase
-        .from("team_members")
-        .select("*, profile:profiles(id, email, full_name)")
-        .eq("team_id", team.id)
-        .order("role");
-      membersMap[team.id] = membs || [];
-    }
-    setMembers(membersMap);
-    setLoading(false);
   }
 
-  useEffect(() => { fetchTeams(); }, []);
+  useEffect(() => { 
+    if (mounted) {
+      fetchTeams(); 
+    }
+  }, [mounted]);
+
+  if (!mounted) return null;
 
   async function createTeam() {
     if (!teamForm.name.trim()) return;
-    await supabase.from("teams").insert({
+    const { error } = await supabase.from("teams").insert({
       name: teamForm.name,
       description: teamForm.description || null,
       unit_type: teamForm.unit_type,
     });
+    
+    if (error) {
+      alert("Erro ao criar time: " + error.message);
+      return;
+    }
+    
     setTeamForm({ name: "", description: "", unit_type: "sdr_team" });
     setShowTeamForm(false);
     fetchTeams();
   }
 
   async function deleteTeam(id: string) {
-    await supabase.from("teams").delete().eq("id", id);
+    if (!confirm("Tem certeza que deseja excluir este time?")) return;
+    const { error } = await supabase.from("teams").delete().eq("id", id);
+    if (error) {
+      alert("Erro ao excluir time: " + error.message);
+      return;
+    }
     if (selectedTeam === id) setSelectedTeam(null);
     fetchTeams();
   }
@@ -99,23 +132,28 @@ function TeamsPage() {
   async function addMember() {
     if (!memberForm.user_email.trim() || !selectedTeam) return;
 
-    const { data: userData } = await supabase
+    const { data: userData, error: uError } = await supabase
       .from("profiles")
       .select("id")
       .eq("email", memberForm.user_email.trim())
       .single();
 
-    if (!userData) {
+    if (uError || !userData) {
       alert("Usuário não encontrado. Verifique o email.");
       return;
     }
 
-    await supabase.from("team_members").insert({
+    const { error } = await supabase.from("team_members").insert({
       user_id: userData.id,
       team_id: selectedTeam,
       role: memberForm.role,
       is_lead: memberForm.is_lead,
     });
+
+    if (error) {
+      alert("Erro ao adicionar membro: " + error.message);
+      return;
+    }
 
     setMemberForm({ user_email: "", role: "agente", is_lead: false });
     setShowMemberForm(false);
@@ -128,6 +166,7 @@ function TeamsPage() {
   }
 
   async function removeMember(memberId: string) {
+    if (!confirm("Remover membro do time?")) return;
     await supabase.from("team_members").delete().eq("id", memberId);
     fetchTeams();
   }
@@ -143,195 +182,237 @@ function TeamsPage() {
 
   const selectedMembers = selectedTeam ? (members[selectedTeam] || []) : [];
 
-  function getRoleConfig(role: string) {
-    return ROLES.find(r => r.value === role) || ROLES[4];
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Equipes & Agentes
-          </h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight">Equipes & Agentes</h1>
+          <p className="text-muted-foreground mt-1">
             Gerencie times, atribua roles e organize a hierarquia de atendimento.
           </p>
         </div>
-        <Button onClick={() => setShowTeamForm(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Novo Time
+        <Button onClick={() => setShowTeamForm(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Novo Time
         </Button>
       </div>
 
-      <Card className="p-3">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar time..." className="pl-8" />
-        </div>
-      </Card>
-
-      {showTeamForm && (
-        <Card className="p-4 border-primary/40">
-          <div className="grid gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Nome do Time</label>
-                <Input value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} placeholder="Ex: SDR São Paulo" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
-                <select value={teamForm.unit_type} onChange={(e) => setTeamForm({ ...teamForm, unit_type: e.target.value })} className="w-full px-3 py-2 border rounded-md text-sm bg-background">
-                  <option value="sdr_team">Time SDR</option>
-                  <option value="sales_team">Time de Vendas</option>
-                  <option value="support_team">Time de Suporte</option>
-                  <option value="unit">Unidade</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Descrição</label>
-              <Input value={teamForm.description} onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })} placeholder="Descrição opcional" />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowTeamForm(false)}>Cancelar</Button>
-              <Button onClick={createTeam}>Criar Time</Button>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Sidebar de Times */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar time..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-        </Card>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          {loading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : filteredTeams.length === 0 ? (
-            <Card className="p-6 text-center text-sm text-muted-foreground">Nenhum time criado ainda.</Card>
-          ) : (
-            filteredTeams.map(team => (
-              <Card
-                key={team.id}
-                className={`p-3 cursor-pointer transition-colors ${selectedTeam === team.id ? "ring-2 ring-primary" : "hover:bg-muted/40"}`}
-                onClick={() => setSelectedTeam(team.id)}
-              >
-                <div className="flex items-center justify-between">
+          <Card>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
+                {loading && teams.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                    Carregando times...
+                  </div>
+                ) : filteredTeams.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    Nenhum time criado ainda.
+                  </div>
+                ) : (
+                  filteredTeams.map((team) => (
+                    <button
+                      key={team.id}
+                      onClick={() => setSelectedTeam(team.id)}
+                      className={`w-full text-left p-4 hover:bg-accent transition-colors flex items-center justify-between group ${
+                        selectedTeam === team.id ? "bg-accent" : ""
+                      }`}
+                    >
+                      <div>
+                        <div className="font-semibold">{team.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {members[team.id]?.length || 0} membros
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 text-destructive h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteTeam(team.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </button>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Detalhes do Time */}
+        <div className="lg:col-span-8 space-y-6">
+          {selectedTeam ? (
+            <>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <p className="font-medium text-sm">{team.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {members[team.id]?.length || 0} membro(s)
+                    <CardTitle>{teams.find(t => t.id === selectedTeam)?.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {teams.find(t => t.id === selectedTeam)?.description || "Sem descrição"}
                     </p>
                   </div>
-                  <Badge variant="outline" className="text-xs">{team.unit_type}</Badge>
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
-
-        <div className="lg:col-span-2">
-          {selectedTeam ? (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">
-                  {teams.find(t => t.id === selectedTeam)?.name}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => setShowMemberForm(true)}>
-                    <Plus className="h-4 w-4 mr-1" /> Adicionar Membro
+                  <Button variant="outline" size="sm" onClick={() => setShowMemberForm(true)} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Adicionar Membro
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => deleteTeam(selectedTeam)}>
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {showMemberForm && (
-                  <div className="mb-4 p-3 border rounded-lg bg-muted/30">
-                    <div className="grid grid-cols-3 gap-3 items-end">
-                      <div className="col-span-2">
-                        <label className="text-xs text-muted-foreground mb-1 block">Email do usuário</label>
-                        <Input value={memberForm.user_email} onChange={(e) => setMemberForm({ ...memberForm, user_email: e.target.value })} placeholder="usuario@email.com" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {selectedMembers.length === 0 ? (
+                      <div className="text-center py-12 border-2 border-dashed rounded-lg text-muted-foreground">
+                        Nenhum membro neste time.
                       </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Role</label>
-                        <select value={memberForm.role} onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })} className="w-full px-3 py-2 border rounded-md text-sm bg-background">
-                          {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                        </select>
+                    ) : (
+                      <div className="grid gap-4">
+                        {selectedMembers.map((member) => {
+                          const roleInfo = ROLES.find(r => r.value === member.role) || ROLES[4];
+                          return (
+                            <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                              <div className="flex items-center gap-4">
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${roleInfo.bg}`}>
+                                  <roleInfo.icon className={`h-5 w-5 ${roleInfo.color}`} />
+                                </div>
+                                <div>
+                                  <div className="font-medium flex items-center gap-2">
+                                    {member.profile?.full_name || member.profile?.email || "Usuário"}
+                                    {member.is_lead && (
+                                      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                        Líder
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">{member.profile?.email}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  className="text-xs border rounded p-1 bg-transparent"
+                                  value={member.role}
+                                  onChange={(e) => updateMemberRole(member.id, e.target.value)}
+                                >
+                                  {ROLES.map(r => (
+                                    <option key={r.value} value={r.value}>{r.label}</option>
+                                  ))}
+                                </select>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={`h-8 w-8 ${member.is_lead ? "text-yellow-600" : "text-muted-foreground"}`}
+                                  onClick={() => toggleLead(member.id, member.is_lead)}
+                                  title="Alternar Líder"
+                                >
+                                  <Crown className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive"
+                                  onClick={() => removeMember(member.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                    <label className="flex items-center gap-2 mt-3 text-sm">
-                      <input type="checkbox" checked={memberForm.is_lead} onChange={(e) => setMemberForm({ ...memberForm, is_lead: e.target.checked })} />
-                      Líder do time
-                    </label>
-                    <div className="flex gap-2 justify-end mt-3">
-                      <Button variant="outline" size="sm" onClick={() => setShowMemberForm(false)}>Cancelar</Button>
-                      <Button size="sm" onClick={addMember}>Adicionar</Button>
-                    </div>
+                    )}
                   </div>
-                )}
+                </CardContent>
+              </Card>
 
-                <div className="space-y-2">
-                  {selectedMembers.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground py-8">Nenhum membro neste time.</p>
-                  ) : (
-                    selectedMembers.map(member => {
-                      const roleCfg = getRoleConfig(member.role);
-                      const RoleIcon = roleCfg.icon;
-                      return (
-                        <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${roleCfg.bg}`}>
-                              <RoleIcon className={`h-4 w-4 ${roleCfg.color}`} />
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm flex items-center gap-2">
-                                {member.profile?.full_name || member.profile?.email || "Usuário"}
-                                {member.is_lead && <Badge variant="secondary" className="text-xs">Líder</Badge>}
-                              </p>
-                              <p className="text-xs text-muted-foreground">{member.profile?.email}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={member.role}
-                              onChange={(e) => updateMemberRole(member.id, e.target.value)}
-                              className="px-2 py-1 border rounded text-xs bg-background"
-                            >
-                              {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                            </select>
-                            <Button size="icon" variant="ghost" onClick={() => removeMember(member.id)}>
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+              {/* Hierarquia Visual */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {ROLES.map((role) => (
+                  <div key={role.value} className={`p-4 rounded-xl border flex flex-col items-center gap-2 text-center transition-all ${role.bg}`}>
+                    <role.icon className={`h-6 w-6 ${role.color}`} />
+                    <span className="text-xs font-bold uppercase tracking-wider">{role.label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
-            <Card className="p-8 text-center text-sm text-muted-foreground">
-              Selecione um time para ver os membros.
-            </Card>
+            <div className="h-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-xl p-12">
+              <Users className="h-12 w-12 mb-4 opacity-20" />
+              <p>Selecione um time para ver os membros e gerenciar a hierarquia.</p>
+            </div>
           )}
         </div>
       </div>
 
-      <Card className="p-4">
-        <p className="text-xs font-medium text-muted-foreground mb-3">Hierarquia de Permissões</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {ROLES.map(role => {
-            const RoleIcon = role.icon;
-            return (
-              <div key={role.value} className={`p-2 rounded-lg ${role.bg} text-center`}>
-                <RoleIcon className={`h-5 w-5 mx-auto mb-1 ${role.color}`} />
-                <p className="text-xs font-medium">{role.label}</p>
+      {/* Modais seriam implementados aqui - Simplificado para o exemplo */}
+      {showTeamForm && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Criar Novo Time</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                placeholder="Nome do Time"
+                value={teamForm.name}
+                onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
+              />
+              <Input
+                placeholder="Descrição"
+                value={teamForm.description}
+                onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })}
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setShowTeamForm(false)}>Cancelar</Button>
+                <Button onClick={createTeam}>Criar</Button>
               </div>
-            );
-          })}
+            </CardContent>
+          </Card>
         </div>
-      </Card>
+      )}
+
+      {showMemberForm && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Adicionar Membro</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                placeholder="Email do Usuário"
+                value={memberForm.user_email}
+                onChange={(e) => setMemberForm({ ...memberForm, user_email: e.target.value })}
+              />
+              <select
+                className="w-full border rounded-md p-2 bg-transparent"
+                value={memberForm.role}
+                onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
+              >
+                {ROLES.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setShowMemberForm(false)}>Cancelar</Button>
+                <Button onClick={addMember}>Adicionar</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
