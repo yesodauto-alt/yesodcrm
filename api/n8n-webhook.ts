@@ -10,8 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const WEBHOOK_TOKEN = process.env.N8N_WEBHOOK_TOKEN || "yesod-webhook-2026";
-  const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${WEBHOOK_TOKEN}`) {
+  if (req.headers.authorization !== `Bearer ${WEBHOOK_TOKEN}`) {
     return res.status(401).json({ error: "Token inválido" });
   }
 
@@ -28,16 +27,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (action) {
       case "upsert_conversation": {
-        const { lead_id, contact_id, channel_id, phone, name } = data;
+        const { lead_id, channel_id, numero, responsavel } = data;
 
         let conversationId = data.conversation_id;
 
-        if (!conversationId && phone) {
+        if (!conversationId && numero) {
           const { data: existing } = await supabase
             .from("conversations")
             .select("id")
-            .or(`lead_id.eq.${lead_id}`)
-            .order("last_message_at", { ascending: false })
+            .eq("numero", numero)
+            .order("occurred_at", { ascending: false })
             .limit(1)
             .single();
 
@@ -48,10 +47,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const { data: newConv, error } = await supabase
             .from("conversations")
             .insert({
-              lead_id,
-              contact_id,
-              channel_id,
-              status: "pending",
+              lead_id: lead_id || null,
+              channel_id: channel_id || null,
+              numero: numero || null,
+              responsavel: responsavel || null,
+              status: "open",
             })
             .select()
             .single();
@@ -64,12 +64,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case "insert_message": {
-        const { conversation_id, sender_type, sender_name, content, message_type, media_url, external_id } = data;
+        const { conversation_id, direction, sender, content, message_type, media_url, external_id } = data;
 
         const { error } = await supabase.from("messages").insert({
           conversation_id,
-          sender_type,
-          sender_name: sender_name || null,
+          direction: direction || "in",
+          sender: sender || null,
           content,
           message_type: message_type || "text",
           media_url: media_url || null,
@@ -82,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .from("conversations")
           .update({
             last_message_at: new Date().toISOString(),
-            unread_count: sender_type === "contact" ? 1 : 0,
+            unread_count: direction === "in" ? 1 : 0,
             updated_at: new Date().toISOString(),
           })
           .eq("id", conversation_id);
@@ -91,35 +91,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case "update_ai": {
-        const { conversation_id, summary, temperature, next_action, intent, tags } = data;
+        const { conversation_id, resumo, proxima_acao, temperatura, intencao, tags } = data;
 
         const { error } = await supabase
           .from("conversations")
           .update({
-            ai_summary: summary || null,
-            ai_temperature: temperature || null,
-            ai_next_action: next_action || null,
-            ai_intent: intent || null,
-            ai_tags: tags || null,
+            resumo_ai: resumo || null,
+            proxima_acao_ai: proxima_acao || null,
+            temperatura_ai: temperatura || null,
+            intencao_ai: intencao || null,
+            tags_ai: tags || null,
             updated_at: new Date().toISOString(),
           })
           .eq("id", conversation_id);
 
         if (error) throw error;
 
+        if (temperatura && data.lead_id) {
+          await supabase
+            .from("leads")
+            .update({ temperatura })
+            .eq("id", data.lead_id);
+        }
+
         return res.status(200).json({ success: true });
       }
 
       case "update_lead": {
-        const { lead_id, status, priority, tags, notes } = data;
+        const { lead_id, status, temperatura, tags, notes } = data;
 
         const updateData: any = { updated_at: new Date().toISOString() };
         if (status) updateData.status = status;
-        if (priority) updateData.priority = priority;
+        if (temperatura) updateData.temperatura = temperatura;
         if (tags) updateData.tags = tags;
         if (notes) updateData.notes = notes;
 
         const { error } = await supabase.from("leads").update(updateData).eq("id", lead_id);
+        if (error) throw error;
+
+        return res.status(200).json({ success: true });
+      }
+
+      case "assign_conversation": {
+        const { conversation_id, responsavel } = data;
+
+        const { error } = await supabase
+          .from("conversations")
+          .update({
+            responsavel,
+            status: "pending",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", conversation_id);
 
         if (error) throw error;
 
