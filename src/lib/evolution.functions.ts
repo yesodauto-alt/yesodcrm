@@ -1,9 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
-
 export const sendWhatsAppMessage = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => 
     z.object({ 
@@ -13,20 +10,15 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
     }).parse(data)
   )
   .handler(async ({ data }) => {
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
-      throw new Error("Evolution API não configurada no servidor.");
-    }
+    const url = process.env.EVOLUTION_API_URL;
+    const key = process.env.EVOLUTION_API_KEY;
 
-    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${data.instance}`, {
+    if (!url || !key) throw new Error("Evolution API não configurada.");
+
+    const response = await fetch(`${url}/message/sendText/${data.instance}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': EVOLUTION_API_KEY
-      },
-      body: JSON.stringify({
-        number: data.number,
-        text: data.text
-      })
+      headers: { 'Content-Type': 'application/json', 'apikey': key },
+      body: JSON.stringify({ number: data.number, text: data.text })
     });
 
     return await response.json();
