@@ -25,22 +25,15 @@ export const Route = createFileRoute("/_authenticated")({
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
 
-    // Busca o role e a unidade do usuário logado
-    const [roleRes, profileRes] = await Promise.all([
-      supabase.from("user_roles").select("role").eq("user_id", data.user.id).single(),
-      supabase.from("profiles").select("unidade, full_name").eq("id", data.user.id).single(),
-    ]);
-
-    const role = (roleRes.data?.role as string) || "agente";
-    const unidade = profileRes.data?.unidade || null;
-    const fullName = profileRes.data?.full_name || data.user.email;
+    const role = (data.user.user_metadata?.role as string) || "agente";
+    const unidade = (data.user.user_metadata?.unidade as string) || null;
+    const fullName = (data.user.user_metadata?.full_name as string) || data.user.email || "Usuário";
 
     return { user: data.user, role, unidade, fullName };
   },
   component: AuthLayout,
 });
 
-// Todos os itens de menu com controle de acesso por role
 const allItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["super_admin", "admin", "agente"] },
   { title: "Prioridades", url: "/priorities", icon: ListChecks, roles: ["super_admin", "admin", "agente"] },
@@ -73,7 +66,6 @@ function AuthLayout() {
   const { role, unidade, fullName } = Route.useRouteContext();
   const [dark, setDark] = useState(false);
 
-  // Filtra os itens de menu conforme o role do usuário
   const items = allItems.filter((item) => item.roles.includes(role));
 
   useEffect(() => {
@@ -113,7 +105,6 @@ function AuthLayout() {
           </SidebarHeader>
 
           <SidebarContent>
-            {/* Badge do role do usuário */}
             <div className="px-3 py-2 group-data-[collapsible=icon]:hidden">
               <div className="flex items-center gap-1.5 text-xs">
                 <ShieldCheck className={`h-3.5 w-3.5 ${ROLE_COLORS[role] || "text-muted-foreground"}`} />
