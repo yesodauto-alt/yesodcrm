@@ -108,26 +108,48 @@ export const connectChannelInstance = createServerFn({ method: "POST" })
       .single();
     if (error || !channel) throw new Error("Canal não encontrado.");
 
-    const instance = instanceNameFor(channel.id, channel.instance_name);
+    const instance = EVOLUTION_INSTANCE;
 
-    // Cria a instância; se já existir, a Evolution devolve erro e seguimos para o connect.
-    try {
+    if (!(await instanceExists(instance))) {
       await evoFetch("/instance/create", {
         method: "POST",
         body: JSON.stringify({
           instanceName: instance,
           qrcode: true,
           integration: "WHATSAPP-BAILEYS",
-          ...(channel.webhook_url ? { webhook: { url: channel.webhook_url, byEvents: false } } : {}),
+          ...(channel.webhook_url
+            ? {
+                webhook: {
+                  url: channel.webhook_url,
+                  byEvents: false,
+                  events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE"],
+                },
+              }
+            : {}),
         }),
       });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "";
-      if (!/already|exists|in use/i.test(msg)) throw e;
+    } else if (channel.webhook_url) {
+      // mantém o webhook do n8n sincronizado com o cadastro do canal
+      try {
+        await evoFetch(`/webhook/set/${instance}`, {
+          method: "POST",
+          body: JSON.stringify({
+            webhook: {
+              enabled: true,
+              url: channel.webhook_url,
+              byEvents: false,
+              events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE"],
+            },
+          }),
+        });
+      } catch {
+        /* não bloqueia o pareamento */
+      }
     }
 
     const connectPayload = await evoFetch(`/instance/connect/${instance}`);
     const qrcode = extractQr(connectPayload);
+
 
     await context.supabase
       .from("channels")
