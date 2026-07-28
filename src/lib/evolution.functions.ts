@@ -206,13 +206,13 @@ export const disconnectChannelInstance = createServerFn({ method: "POST" })
       .single();
     if (error || !channel) throw new Error("Canal não encontrado.");
 
-    if (channel.instance_name) {
-      try {
-        await evoFetch(`/instance/logout/${channel.instance_name}`, { method: "DELETE" });
-      } catch {
-        /* instância já pode estar desconectada */
-      }
+    const instance = channel.instance_name || EVOLUTION_INSTANCE;
+    try {
+      await evoFetch(`/instance/logout/${instance}`, { method: "DELETE" });
+    } catch {
+      /* instância já pode estar desconectada */
     }
+
 
     await context.supabase.from("channels").update({ status: "offline" }).eq("id", channel.id);
     await context.supabase.from("channel_logs").insert({
