@@ -24,6 +24,7 @@ import {
   getKnowledgeBase,
   upsertKnowledgeDocument,
   deleteKnowledgeDocument,
+  getKnowledgeFileUrl,
 } from "@/lib/ai-config.functions";
 
 const MODELS = [
@@ -70,6 +71,7 @@ export function AssistantConfigDialog({
   const loadKb = useServerFn(getKnowledgeBase);
   const saveDoc = useServerFn(upsertKnowledgeDocument);
   const removeDoc = useServerFn(deleteKnowledgeDocument);
+  const fileUrl = useServerFn(getKnowledgeFileUrl);
 
   const [form, setForm] = useState<AssistantRow | null>(assistant);
   const [saving, setSaving] = useState(false);
@@ -79,6 +81,7 @@ export function AssistantConfigDialog({
   const [docs, setDocs] = useState<any[]>([]);
   const [docTitle, setDocTitle] = useState("");
   const [docContent, setDocContent] = useState("");
+  const [docFile, setDocFile] = useState<File | null>(null);
   const [busyDocs, setBusyDocs] = useState(false);
 
   useEffect(() => {
@@ -134,17 +137,42 @@ export function AssistantConfigDialog({
     if (!kb || !docTitle.trim()) return;
     setBusyDocs(true);
     try {
+      let filePath: string | null = null;
+      if (docFile) {
+        const safeName = docFile.name.replace(/[^\w.\-]+/g, "_");
+        const path = `${kb.id}/${crypto.randomUUID()}-${safeName}`;
+        const { error: upErr } = await supabase.storage
+          .from("knowledge-docs")
+          .upload(path, docFile, { upsert: false });
+        if (upErr) throw new Error(upErr.message);
+        filePath = path;
+      }
       const row = await saveDoc({
-        data: { knowledge_base_id: kb.id, title: docTitle, content: docContent },
+        data: {
+          knowledge_base_id: kb.id,
+          title: docTitle,
+          content: docContent,
+          file_path: filePath,
+        },
       });
       setDocs((d) => [row as any, ...d]);
       setDocTitle("");
       setDocContent("");
+      setDocFile(null);
       toast.success("Documento adicionado");
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao adicionar documento");
     } finally {
       setBusyDocs(false);
+    }
+  }
+
+  async function handleDownload(path: string) {
+    try {
+      const { url } = (await fileUrl({ data: { path } })) as any;
+      window.open(url, "_blank", "noopener");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao abrir arquivo");
     }
   }
 
@@ -325,8 +353,23 @@ export function AssistantConfigDialog({
                         value={docContent}
                         onChange={(e) => setDocContent(e.target.value)}
                       />
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">
+                          Arquivo (PDF, DOCX, TXT ou Markdown) — opcional
+                        </Label>
+                        <Input
+                          type="file"
+                          accept=".pdf,.docx,.doc,.txt,.md,.markdown"
+                          onChange={(e) => setDocFile(e.target.files?.[0] ?? null)}
+                        />
+                      </div>
                       <Button onClick={handleAddDoc} disabled={busyDocs || !docTitle.trim()}>
-                        <Plus className="h-4 w-4 mr-2" /> Adicionar documento
+                        {busyDocs ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Plus className="h-4 w-4 mr-2" />
+                        )}
+                        Adicionar documento
                       </Button>
                     </CardContent>
                   </Card>
@@ -337,11 +380,22 @@ export function AssistantConfigDialog({
                       key={d.id}
                       className="border rounded-lg p-3 flex items-start justify-between gap-3"
                     >
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-medium text-sm">{d.title}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
-                          {d.content}
-                        </p>
+                        {d.content && (
+                          <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+                            {d.content}
+                          </p>
+                        )}
+                        {d.file_path && (
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(d.file_path)}
+                            className="mt-1 text-xs text-primary underline underline-offset-2"
+                          >
+                            Baixar arquivo
+                          </button>
+                        )}
                       </div>
                       {canEditDocs && (
                         <Button

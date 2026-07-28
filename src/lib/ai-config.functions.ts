@@ -170,14 +170,17 @@ export const upsertKnowledgeDocument = createServerFn({ method: "POST" })
         knowledge_base_id: z.string().uuid(),
         title: z.string().min(1),
         content: z.string().nullish(),
+        file_path: z.string().nullish(),
       })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
     if (data.id) {
+      const patch: any = { title: data.title, content: data.content || null };
+      if (data.file_path !== undefined) patch.file_path = data.file_path || null;
       const { data: row, error } = await context.supabase
         .from("ai_knowledge_documents")
-        .update({ title: data.title, content: data.content || null } as any)
+        .update(patch)
         .eq("id", data.id)
         .select()
         .single();
@@ -190,6 +193,7 @@ export const upsertKnowledgeDocument = createServerFn({ method: "POST" })
         knowledge_base_id: data.knowledge_base_id,
         title: data.title,
         content: data.content || null,
+        file_path: data.file_path || null,
         created_by: context.userId,
       } as any)
       .select()
@@ -202,10 +206,35 @@ export const deleteKnowledgeDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
+    const { data: doc } = await context.supabase
+      .from("ai_knowledge_documents")
+      .select("file_path")
+      .eq("id", data.id)
+      .maybeSingle();
+
     const { error } = await context.supabase
       .from("ai_knowledge_documents")
       .delete()
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    const filePath = (doc as any)?.file_path;
+    if (filePath) {
+      await context.supabase.storage.from("knowledge-docs").remove([filePath]);
+    }
     return { ok: true };
+  });
+
+/** Gera um link temporário para baixar o arquivo de um documento. */
+export const getKnowledgeFileUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { path: string }) =>
+    z.object({ path: z.string().min(1) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: signed, error } = await context.supabase.storage
+      .from("knowledge-docs")
+      .createSignedUrl(data.path, 300);
+    if (error) throw new Error(error.message);
+    return { url: signed.signedUrl };
   });

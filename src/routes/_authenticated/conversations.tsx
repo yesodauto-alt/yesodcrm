@@ -43,8 +43,16 @@ function ConversationsPage() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await sync({ data: { limit: 50 } });
-      setSyncResult(`${res.conversations} conversas, ${res.messages} mensagens importadas`);
+      const r = await sync({ data: { limit: 50 } });
+      const partes = [
+        `${r.contatosEncontrados} contatos encontrados`,
+        `${r.contatosCriados} contatos criados`,
+        `${r.conversasImportadas} conversas importadas`,
+        `${r.conversasAtualizadas} conversas atualizadas`,
+        `${r.mensagensSincronizadas} mensagens sincronizadas`,
+        `${r.erros.length} erros`,
+      ];
+      setSyncResult(partes.join(" · ") + (r.erros.length ? ` — ${r.erros.slice(0, 3).join("; ")}` : ""));
       refetch();
     } catch (err: any) {
       setSyncResult(`Erro: ${err.message}`);
@@ -128,7 +136,7 @@ function ConversationsPage() {
                 </div>
                 <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
                   {c.numero && <span>📱 {c.numero}</span>}
-                  {c.channels?.nome && <span className="flex items-center gap-1"><Radio className="h-3 w-3" />{c.channels.nome}</span>}
+                  {c.channels?.name && <span className="flex items-center gap-1"><Radio className="h-3 w-3" />{c.channels.name}</span>}
                   {c.responsavel && <span className="flex items-center gap-1"><User className="h-3 w-3" />{c.responsavel}</span>}
                   <span>
                     {format(new Date(c.last_message_at ?? c.occurred_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
