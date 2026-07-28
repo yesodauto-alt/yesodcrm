@@ -2,23 +2,41 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/** Nome fixo da instância usada pelo CRM. */
+export const EVOLUTION_INSTANCE = "yesodcrm";
+
+function normalizeBaseUrl(raw: string) {
+  let url = raw.trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+  // o servidor da Evolution redireciona http -> https (307), o que quebra POSTs
+  url = url.replace(/^http:\/\//i, "https://");
+  return url;
+}
+
 function evolutionConfig() {
-  const url = process.env.EVOLUTION_API_URL?.replace(/\/$/, "");
+  const rawUrl = process.env.EVOLUTION_API_URL;
   const key = process.env.EVOLUTION_API_KEY;
-  if (!url || !key) {
+  if (!rawUrl || !key) {
     throw new Error(
       "Evolution API não configurada. Cadastre EVOLUTION_API_URL e EVOLUTION_API_KEY.",
     );
   }
-  return { url, key };
+  return { url: normalizeBaseUrl(rawUrl), key };
 }
 
 async function evoFetch(path: string, init?: RequestInit) {
   const { url, key } = evolutionConfig();
-  const res = await fetch(`${url}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", apikey: key, ...(init?.headers ?? {}) },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${url}${path}`, {
+      ...init,
+      headers: { "Content-Type": "application/json", apikey: key, ...(init?.headers ?? {}) },
+    });
+  } catch (e) {
+    throw new Error(
+      `Não foi possível contatar a Evolution API em ${url} (${e instanceof Error ? e.message : "erro de rede"}).`,
+    );
+  }
   const text = await res.text();
   let body: any = null;
   try {
@@ -27,7 +45,14 @@ async function evoFetch(path: string, init?: RequestInit) {
     body = { message: text };
   }
   if (!res.ok) {
-    throw new Error(body?.message || body?.error || `Evolution API retornou ${res.status}`);
+    const detail =
+      body?.response?.message ??
+      body?.message ??
+      body?.error ??
+      (typeof text === "string" ? text.slice(0, 200) : "");
+    throw new Error(
+      `Evolution API ${res.status} em ${path}${detail ? `: ${Array.isArray(detail) ? detail.join(", ") : detail}` : ""}`,
+    );
   }
   return body;
 }
@@ -40,9 +65,19 @@ async function assertAdmin(context: any) {
   if (!data) throw new Error("Apenas administradores podem gerenciar canais.");
 }
 
-function instanceNameFor(channelId: string, existing?: string | null) {
-  return existing || `yesod_${channelId.replace(/-/g, "").substring(0, 12)}`;
+/** Verifica na Evolution se a instância já existe (evita depender do texto do erro). */
+async function instanceExists(name: string) {
+  try {
+    const list = await evoFetch(`/instance/fetchInstances`);
+    const arr = Array.isArray(list) ? list : (list?.instances ?? []);
+    return arr.some(
+      (i: any) => (i?.name ?? i?.instance?.instanceName ?? i?.instanceName) === name,
+    );
+  } catch {
+    return false;
+  }
 }
+
 
 function extractQr(payload: any): string | null {
   const raw =
