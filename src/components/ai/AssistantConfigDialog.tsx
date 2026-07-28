@@ -353,8 +353,23 @@ export function AssistantConfigDialog({
                         value={docContent}
                         onChange={(e) => setDocContent(e.target.value)}
                       />
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">
+                          Arquivo (PDF, DOCX, TXT ou Markdown) — opcional
+                        </Label>
+                        <Input
+                          type="file"
+                          accept=".pdf,.docx,.doc,.txt,.md,.markdown"
+                          onChange={(e) => setDocFile(e.target.files?.[0] ?? null)}
+                        />
+                      </div>
                       <Button onClick={handleAddDoc} disabled={busyDocs || !docTitle.trim()}>
-                        <Plus className="h-4 w-4 mr-2" /> Adicionar documento
+                        {busyDocs ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Plus className="h-4 w-4 mr-2" />
+                        )}
+                        Adicionar documento
                       </Button>
                     </CardContent>
                   </Card>
@@ -365,11 +380,22 @@ export function AssistantConfigDialog({
                       key={d.id}
                       className="border rounded-lg p-3 flex items-start justify-between gap-3"
                     >
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-medium text-sm">{d.title}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
-                          {d.content}
-                        </p>
+                        {d.content && (
+                          <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+                            {d.content}
+                          </p>
+                        )}
+                        {d.file_path && (
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(d.file_path)}
+                            className="mt-1 text-xs text-primary underline underline-offset-2"
+                          >
+                            Baixar arquivo
+                          </button>
+                        )}
                       </div>
                       {canEditDocs && (
                         <Button
