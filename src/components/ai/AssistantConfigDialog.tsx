@@ -70,6 +70,7 @@ export function AssistantConfigDialog({
   const loadKb = useServerFn(getKnowledgeBase);
   const saveDoc = useServerFn(upsertKnowledgeDocument);
   const removeDoc = useServerFn(deleteKnowledgeDocument);
+  const fileUrl = useServerFn(getKnowledgeFileUrl);
 
   const [form, setForm] = useState<AssistantRow | null>(assistant);
   const [saving, setSaving] = useState(false);
@@ -79,6 +80,7 @@ export function AssistantConfigDialog({
   const [docs, setDocs] = useState<any[]>([]);
   const [docTitle, setDocTitle] = useState("");
   const [docContent, setDocContent] = useState("");
+  const [docFile, setDocFile] = useState<File | null>(null);
   const [busyDocs, setBusyDocs] = useState(false);
 
   useEffect(() => {
