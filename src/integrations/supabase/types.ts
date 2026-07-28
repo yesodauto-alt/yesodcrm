@@ -14,6 +14,263 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_assistant_audit: {
+        Row: {
+          action: string
+          assistant_id: string
+          changes: Json
+          created_at: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          assistant_id: string
+          changes?: Json
+          created_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          assistant_id?: string
+          changes?: Json
+          created_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistant_audit_assistant_id_fkey"
+            columns: ["assistant_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_assistants: {
+        Row: {
+          created_at: string
+          id: string
+          model: string
+          name: string
+          sector: string
+          status: string
+          system_prompt: string | null
+          team_id: string | null
+          temperature: number
+          timeout_seconds: number
+          updated_at: string
+          updated_by: string | null
+          webhook_url: string | null
+          workflow: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          model?: string
+          name: string
+          sector: string
+          status?: string
+          system_prompt?: string | null
+          team_id?: string | null
+          temperature?: number
+          timeout_seconds?: number
+          updated_at?: string
+          updated_by?: string | null
+          webhook_url?: string | null
+          workflow?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          model?: string
+          name?: string
+          sector?: string
+          status?: string
+          system_prompt?: string | null
+          team_id?: string | null
+          temperature?: number
+          timeout_seconds?: number
+          updated_at?: string
+          updated_by?: string | null
+          webhook_url?: string | null
+          workflow?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistants_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_knowledge_bases: {
+        Row: {
+          assistant_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          assistant_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assistant_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_knowledge_bases_assistant_id_fkey"
+            columns: ["assistant_id"]
+            isOneToOne: true
+            referencedRelation: "ai_assistants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_knowledge_bases_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_knowledge_documents: {
+        Row: {
+          content: string | null
+          created_at: string
+          created_by: string | null
+          file_path: string | null
+          id: string
+          knowledge_base_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_path?: string | null
+          id?: string
+          knowledge_base_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_path?: string | null
+          id?: string
+          knowledge_base_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_knowledge_documents_knowledge_base_id_fkey"
+            columns: ["knowledge_base_id"]
+            isOneToOne: false
+            referencedRelation: "ai_knowledge_bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_logs: {
+        Row: {
+          automation_id: string
+          created_at: string
+          id: string
+          message: string | null
+          payload: Json
+          status: string
+        }
+        Insert: {
+          automation_id: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          payload?: Json
+          status: string
+        }
+        Update: {
+          automation_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          payload?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          actions: Json
+          active: boolean
+          conditions: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          trigger_entity: string
+          trigger_event: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json
+          active?: boolean
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          trigger_entity: string
+          trigger_event: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          active?: boolean
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          trigger_entity?: string
+          trigger_event?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       channel_logs: {
         Row: {
           channel_id: string
@@ -971,6 +1228,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_edit_kb_docs: {
+        Args: { _kb_id: string; _user_id?: string }
+        Returns: boolean
+      }
+      can_view_kb: {
+        Args: { _kb_id: string; _user_id?: string }
+        Returns: boolean
+      }
       current_app_role: { Args: never; Returns: string }
       get_current_user_role: {
         Args: { user_uuid: string }
