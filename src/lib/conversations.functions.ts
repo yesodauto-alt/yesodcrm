@@ -18,7 +18,7 @@ export interface Conversation {
 export async function listConversations() {
   const { data, error } = await supabase
     .from('lead_conversations')
-    .select(`*, channel:channels(id, name, connection_type), lead:leads(id, nome, whatsapp)`)
+    .select('*, channel:channels(id, name, connection_type), lead:leads(id, nome, whatsapp)')
     .order('last_message_at', { ascending: false, nullsFirst: false });
   if (error) throw error;
   return data as Conversation[];
@@ -27,7 +27,7 @@ export async function listConversations() {
 export async function getConversation(id: string) {
   const { data, error } = await supabase
     .from('lead_conversations')
-    .select(`*, channel:channels(id, name, connection_type), lead:leads(id, nome, whatsapp)`)
+    .select('*, channel:channels(id, name, connection_type), lead:leads(id, nome, whatsapp)')
     .eq('id', id)
     .single();
   if (error) throw error;
