@@ -1,0 +1,2 @@
+CREATE POLICY "fu_owner_all" ON public.lead_follow_ups FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY "obs_owner_all" ON public.lead_observations FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
