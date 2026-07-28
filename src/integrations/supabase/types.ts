@@ -42,70 +42,53 @@ export type Database = {
           tipo?: string
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "channel_logs_channel_id_fkey"
-            columns: ["channel_id"]
-            isOneToOne: false
-            referencedRelation: "channels"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       channels: {
         Row: {
-          ativo: boolean
-          created_at: string
-          created_by: string | null
-          descricao: string | null
+          active: boolean | null
+          api_token: string | null
+          connection_type: string | null
+          created_at: string | null
+          description: string | null
           id: string
-          last_sync_at: string | null
-          metadata: Json
-          nome: string
-          numero: string | null
-          responsavel: string | null
-          status: Database["public"]["Enums"]["channel_status"]
-          tipo: Database["public"]["Enums"]["channel_type"]
-          token: string | null
-          unidades: string[]
-          updated_at: string
+          name: string
+          responsible: string | null
+          status: string | null
+          unit: string | null
+          updated_at: string | null
           webhook_url: string | null
+          whatsapp_number: string | null
         }
         Insert: {
-          ativo?: boolean
-          created_at?: string
-          created_by?: string | null
-          descricao?: string | null
+          active?: boolean | null
+          api_token?: string | null
+          connection_type?: string | null
+          created_at?: string | null
+          description?: string | null
           id?: string
-          last_sync_at?: string | null
-          metadata?: Json
-          nome: string
-          numero?: string | null
-          responsavel?: string | null
-          status?: Database["public"]["Enums"]["channel_status"]
-          tipo?: Database["public"]["Enums"]["channel_type"]
-          token?: string | null
-          unidades?: string[]
-          updated_at?: string
+          name: string
+          responsible?: string | null
+          status?: string | null
+          unit?: string | null
+          updated_at?: string | null
           webhook_url?: string | null
+          whatsapp_number?: string | null
         }
         Update: {
-          ativo?: boolean
-          created_at?: string
-          created_by?: string | null
-          descricao?: string | null
+          active?: boolean | null
+          api_token?: string | null
+          connection_type?: string | null
+          created_at?: string | null
+          description?: string | null
           id?: string
-          last_sync_at?: string | null
-          metadata?: Json
-          nome?: string
-          numero?: string | null
-          responsavel?: string | null
-          status?: Database["public"]["Enums"]["channel_status"]
-          tipo?: Database["public"]["Enums"]["channel_type"]
-          token?: string | null
-          unidades?: string[]
-          updated_at?: string
+          name?: string
+          responsible?: string | null
+          status?: string | null
+          unit?: string | null
+          updated_at?: string | null
           webhook_url?: string | null
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
@@ -183,6 +166,78 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          channel_id: string | null
+          created_at: string | null
+          id: string
+          intencao_ai: string | null
+          last_message_at: string | null
+          lead_id: string | null
+          numero: string | null
+          occurred_at: string | null
+          proxima_acao_ai: string | null
+          responsavel: string | null
+          resumo_ai: string | null
+          status: string | null
+          tags_ai: string[] | null
+          temperatura_ai: string | null
+          unread_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          created_at?: string | null
+          id?: string
+          intencao_ai?: string | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          numero?: string | null
+          occurred_at?: string | null
+          proxima_acao_ai?: string | null
+          responsavel?: string | null
+          resumo_ai?: string | null
+          status?: string | null
+          tags_ai?: string[] | null
+          temperatura_ai?: string | null
+          unread_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          created_at?: string | null
+          id?: string
+          intencao_ai?: string | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          numero?: string | null
+          occurred_at?: string | null
+          proxima_acao_ai?: string | null
+          responsavel?: string | null
+          resumo_ai?: string | null
+          status?: string | null
+          tags_ai?: string[] | null
+          temperatura_ai?: string | null
+          unread_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_conversations: {
         Row: {
           assigned_user_id: string | null
@@ -239,13 +294,6 @@ export type Database = {
           unidade?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "lead_conversations_channel_id_fkey"
-            columns: ["channel_id"]
-            isOneToOne: false
-            referencedRelation: "channels"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "lead_conversations_contact_id_fkey"
             columns: ["contact_id"]
@@ -551,12 +599,51 @@ export type Database = {
           valor?: number | null
           whatsapp?: string | null
         }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          direction: string
+          external_id: string | null
+          id: string
+          is_read: boolean | null
+          media_url: string | null
+          message_type: string | null
+          sender: string | null
+          sent_at: string | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          direction?: string
+          external_id?: string | null
+          id?: string
+          is_read?: boolean | null
+          media_url?: string | null
+          message_type?: string | null
+          sender?: string | null
+          sent_at?: string | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          direction?: string
+          external_id?: string | null
+          id?: string
+          is_read?: boolean | null
+          media_url?: string | null
+          message_type?: string | null
+          sender?: string | null
+          sent_at?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "leads_channel_id_fkey"
-            columns: ["channel_id"]
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
             isOneToOne: false
-            referencedRelation: "channels"
+            referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -565,23 +652,29 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          default_role: string | null
           email: string | null
           full_name: string | null
           id: string
+          unidade: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          default_role?: string | null
           email?: string | null
           full_name?: string | null
           id: string
+          unidade?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          default_role?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          unidade?: string | null
         }
         Relationships: []
       }
@@ -663,6 +756,110 @@ export type Database = {
           },
         ]
       }
+      team_members: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          is_lead: boolean | null
+          role: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_lead?: boolean | null
+          role?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_lead?: boolean | null
+          role?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          unit_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          unit_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          unit_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          active: boolean | null
+          category: string
+          content: string
+          created_at: string | null
+          id: string
+          shortcut: string | null
+          title: string
+          updated_at: string | null
+          variables: string[] | null
+        }
+        Insert: {
+          active?: boolean | null
+          category?: string
+          content: string
+          created_at?: string | null
+          id?: string
+          shortcut?: string | null
+          title: string
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Update: {
+          active?: boolean | null
+          category?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          shortcut?: string | null
+          title?: string
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -686,6 +883,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_current_user_role: {
+        Args: { user_uuid: string }
+        Returns: {
+          role: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -695,7 +898,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "member"
+      app_role: "admin" | "member" | "super_admin" | "agente"
       channel_status: "online" | "offline" | "conectando" | "erro"
       channel_type: "evolution" | "meta_cloud"
       history_type:
@@ -862,7 +1065,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "member"],
+      app_role: ["admin", "member", "super_admin", "agente"],
       channel_status: ["online", "offline", "conectando", "erro"],
       channel_type: ["evolution", "meta_cloud"],
       history_type: [
