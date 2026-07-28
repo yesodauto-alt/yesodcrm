@@ -1,152 +1,157 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  connectChannelInstance,
+  channelInstanceStatus,
+  disconnectChannelInstance,
+} from "@/lib/evolution.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Radio, Plus, QrCode, RefreshCw, Trash2, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Radio,
+  Plus,
+  QrCode,
+  Trash2,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/channels")({
+  head: () => ({
+    meta: [
+      { title: "Canais de WhatsApp — Yesod CRM" },
+      { name: "description", content: "Gerencie conexões de WhatsApp do seu CRM." },
+    ],
+  }),
   component: ChannelsPage,
 });
 
 interface Channel {
   id: string;
-  nome: string;
-  numero: string | null;
-  tipo: string;
-  status: string;
-  unidades: string[] | null;
-  responsavel: string | null;
-  ativo: boolean;
+  name: string;
+  whatsapp_number: string | null;
+  connection_type: string | null;
+  status: string | null;
+  unit: string | null;
+  units: string[] | null;
+  responsible: string | null;
+  active: boolean | null;
   webhook_url: string | null;
-  token: string | null;
-  descricao: string | null;
+  api_token: string | null;
+  description: string | null;
+  instance_name: string | null;
 }
 
 function ChannelsPage() {
+  const { role } = Route.useRouteContext() as { role: string };
+  const isAdmin = role === "admin" || role === "super_admin";
+
+  const connectFn = useServerFn(connectChannelInstance);
+  const statusFn = useServerFn(channelInstanceStatus);
+  const disconnectFn = useServerFn(disconnectChannelInstance);
+
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<string>("");
+  const [connectionStatus, setConnectionStatus] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetchChannels();
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, []);
 
   async function fetchChannels() {
     setLoading(true);
-    const { data, error } = await supabase.from("channels").select("*").order("created_at", { ascending: false });
-    if (error) {
-      console.error("Erro ao buscar canais:", error);
-    }
-    setChannels(data || []);
+    const { data, error } = await supabase
+      .from("channels")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) toast.error("Erro ao carregar canais");
+    setChannels((data ?? []) as unknown as Channel[]);
     setLoading(false);
+  }
+
+  function stopPolling() {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = null;
   }
 
   async function generateQR(channel: Channel) {
     setQrLoading(true);
     setQrCode(null);
-    setConnectionStatus("Criando instância...");
-
+    setConnectionStatus("Criando instância na Evolution API...");
     try {
-      // Passo 1: Criar instância na Evolution API
-      const instanceName = `yesod_${channel.id.substring(0, 8)}`;
-
-      const createRes = await fetch(`/api/evolution-proxy?action=create&instanceName=${instanceName}`, {
-        method: "POST",
-      });
-      const createData = await createRes.json();
-
-      if (!createRes.ok) {
-        setConnectionStatus(`Erro ao criar instância: ${createData.error || createData.message}`);
-        console.error("Erro na criação:", createData);
-        setQrLoading(false);
+      const res = await connectFn({ data: { channelId: channel.id } });
+      if (!res.qrcode) {
+        toast.error("A Evolution API não retornou o QR Code.");
+        setConnectionStatus("");
         return;
       }
-
-      // Passo 2: Conectar e pegar QR Code
-      setConnectionStatus("Gerando QR Code...");
-      const connectRes = await fetch(`/api/evolution-proxy?action=connect&instanceName=${instanceName}`, {
-        method: "POST",
-      });
-      const connectData = await connectRes.json();
-
-      if (!connectRes.ok) {
-        setConnectionStatus(`Erro ao gerar QR Code: ${connectData.error || connectData.message}`);
-        console.error("Erro na conexão:", connectData);
-        setQrLoading(false);
-        return;
-      }
-
-      if (connectData?.qrcode) {
-        // QR Code vem como base64
-        const qr = connectData.qrcode.includes("base64,")
-          ? connectData.qrcode
-          : `data:image/png;base64,${connectData.qrcode}`;
-        setQrCode(qr);
-        setConnectionStatus("Escaneie o QR Code com seu WhatsApp");
-
-        // Atualiza status no banco
-        await supabase.from("channels").update({ status: "conectando" }).eq("id", channel.id);
-
-        // Inicia polling de status
-        pollConnectionStatus(instanceName, channel.id);
-      } else if (connectData?.base64) {
-        setQrCode(`data:image/png;base64,${connectData.base64}`);
-        setConnectionStatus("Escaneie o QR Code com seu WhatsApp");
-        pollConnectionStatus(instanceName, channel.id);
-      } else {
-        setConnectionStatus("Erro: QR Code não retornado pela Evolution API");
-        console.error("Resposta da Evolution API:", connectData);
-      }
-    } catch (error) {
-      setConnectionStatus("Erro ao gerar QR Code");
-      console.error(error);
+      setQrCode(res.qrcode);
+      setConnectionStatus("Escaneie o QR Code com seu WhatsApp");
+      startPolling(channel.id);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao gerar QR Code");
+      setConnectionStatus("");
+    } finally {
+      setQrLoading(false);
     }
-    setQrLoading(false);
   }
 
-  async function pollConnectionStatus(instanceName: string, channelId: string) {
+  function startPolling(channelId: string) {
+    stopPolling();
     let attempts = 0;
-    const maxAttempts = 60; // 5 minutos
-
-    const interval = setInterval(async () => {
+    pollRef.current = setInterval(async () => {
       attempts++;
-      if (attempts >= maxAttempts) {
-        clearInterval(interval);
-        setConnectionStatus("Tempo esgotado. Tente novamente.");
+      if (attempts > 60) {
+        stopPolling();
+        setConnectionStatus("Tempo esgotado. Gere um novo QR Code.");
         return;
       }
-
       try {
-        const res = await fetch(`/api/evolution-proxy?action=status&instanceName=${instanceName}`);
-        const data = await res.json();
-
-        if (data?.state === "open" || data?.status === "open") {
-          clearInterval(interval);
-          setConnectionStatus("WhatsApp conectado!");
+        const res = await statusFn({ data: { channelId } });
+        if (res.status === "online") {
+          stopPolling();
           setQrCode(null);
-          await supabase.from("channels").update({ status: "online" }).eq("id", channelId);
+          setConnectionStatus("");
+          toast.success("WhatsApp conectado!");
           fetchChannels();
         }
-      } catch {}
+      } catch {
+        /* segue tentando */
+      }
     }, 5000);
+  }
+
+  async function refreshStatus(channel: Channel) {
+    try {
+      const res = await statusFn({ data: { channelId: channel.id } });
+      toast.success(`Status: ${res.status}`);
+      fetchChannels();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao consultar status");
+    }
   }
 
   async function disconnect(channel: Channel) {
     if (!confirm("Desconectar este canal do WhatsApp?")) return;
-
-    const instanceName = `yesod_${channel.id.substring(0, 8)}`;
     try {
-      await fetch(`/api/evolution-proxy?action=logout&instanceName=${instanceName}`, { method: "DELETE" });
-      await supabase.from("channels").update({ status: "offline" }).eq("id", channel.id);
+      await disconnectFn({ data: { channelId: channel.id } });
+      toast.success("Canal desconectado");
       fetchChannels();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao desconectar");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao desconectar");
     }
   }
 
@@ -165,55 +170,72 @@ function ChannelsPage() {
           <h1 className="text-2xl font-bold">Canais</h1>
           <p className="text-sm text-muted-foreground">Gerencie suas conexões de WhatsApp</p>
         </div>
-        <Button onClick={() => { setEditingChannel(null); setShowModal(true); }}>
-          <Plus className="h-4 w-4" />
-          Novo Canal
-        </Button>
+        {isAdmin && (
+          <Button
+            onClick={() => {
+              setEditingChannel(null);
+              setShowModal(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Novo Canal
+          </Button>
+        )}
       </div>
 
-      {/* QR Code Modal */}
-      {qrCode && (
-        <Card className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <CardContent className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full mx-4">
-            <h3 className="text-lg font-semibold text-center mb-4">Conectar WhatsApp</h3>
-            <div className="flex justify-center mb-4">
-              <img src={qrCode} alt="QR Code" className="w-64 h-64" />
-            </div>
-            <p className="text-sm text-center text-muted-foreground mb-4">
-              {connectionStatus}
-            </p>
-            <p className="text-xs text-center text-muted-foreground mb-4">
-              Abra o WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho
-            </p>
-            <Button variant="outline" className="w-full" onClick={() => { setQrCode(null); setConnectionStatus(""); }}>
-              Fechar
-            </Button>
-          </CardContent>
-        </Card>
+      {(qrCode || qrLoading) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="max-w-sm w-full">
+            <CardContent className="p-8">
+              <h3 className="text-lg font-semibold text-center mb-4">Conectar WhatsApp</h3>
+              {qrLoading ? (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">{connectionStatus}</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-center mb-4">
+                    <img src={qrCode!} alt="QR Code de pareamento do WhatsApp" className="w-64 h-64" />
+                  </div>
+                  <p className="text-sm text-center text-muted-foreground mb-2">{connectionStatus}</p>
+                  <p className="text-xs text-center text-muted-foreground mb-4">
+                    WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      stopPolling();
+                      setQrCode(null);
+                      setConnectionStatus("");
+                    }}
+                  >
+                    Fechar
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      {/* Loading QR */}
-      {qrLoading && (
-        <Card className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <CardContent className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full mx-4">
-            <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">{connectionStatus}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Lista de Canais */}
       {channels.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Radio className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground mb-4">Nenhum canal configurado</p>
-            <Button onClick={() => { setEditingChannel(null); setShowModal(true); }}>
-              <Plus className="h-4 w-4" />
-              Criar primeiro canal
-            </Button>
+            {isAdmin && (
+              <Button
+                onClick={() => {
+                  setEditingChannel(null);
+                  setShowModal(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Criar primeiro canal
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -227,101 +249,137 @@ function ChannelsPage() {
                       <Radio className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">{channel.nome}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{channel.numero || "Sem número"}</p>
+                      <CardTitle className="text-base">{channel.name}</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {channel.whatsapp_number || "Sem número"}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {channel.status === "online" ? (
-                      <span className="flex items-center gap-1 text-xs text-green-500">
-                        <CheckCircle2 className="h-4 w-4" /> Online
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <XCircle className="h-4 w-4" /> {channel.status === "conectando" ? "Conectando..." : "Offline"}
-                      </span>
-                    )}
-                  </div>
+                  {channel.status === "online" ? (
+                    <span className="flex items-center gap-1 text-xs text-green-600">
+                      <CheckCircle2 className="h-4 w-4" /> Online
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <XCircle className="h-4 w-4" />
+                      {channel.status === "conectando" ? "Conectando..." : "Offline"}
+                    </span>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-2">
-                  {channel.status !== "online" ? (
+                <div className="flex flex-wrap gap-2">
+                  {isAdmin && channel.status !== "online" && (
                     <Button size="sm" onClick={() => generateQR(channel)}>
                       <QrCode className="h-4 w-4" />
                       Gerar QR Code
                     </Button>
-                  ) : (
+                  )}
+                  {isAdmin && channel.status === "online" && (
                     <Button size="sm" variant="destructive" onClick={() => disconnect(channel)}>
                       <Trash2 className="h-4 w-4" />
                       Desconectar
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" onClick={() => { setEditingChannel(channel); setShowModal(true); }}>
-                    Editar
+                  <Button size="sm" variant="outline" onClick={() => refreshStatus(channel)}>
+                    <RefreshCw className="h-4 w-4" />
+                    Status
                   </Button>
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingChannel(channel);
+                        setShowModal(true);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                  )}
                 </div>
-                {channel.tipo && (
-                  <p className="text-xs text-muted-foreground mt-3">Tipo: {channel.tipo === "evolution" ? "Evolution API" : "Meta Cloud"}</p>
-                )}
+                <p className="text-xs text-muted-foreground mt-3">
+                  Tipo: {channel.connection_type === "meta_cloud" ? "Meta Cloud" : "Evolution API"}
+                  {channel.instance_name ? ` · Instância: ${channel.instance_name}` : ""}
+                </p>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Modal de Editar/Criar */}
       {showModal && (
         <ChannelModal
           channel={editingChannel}
-          onClose={() => { setShowModal(false); setEditingChannel(null); }}
-          onSaved={() => { setShowModal(false); setEditingChannel(null); fetchChannels(); }}
+          onClose={() => {
+            setShowModal(false);
+            setEditingChannel(null);
+          }}
+          onSaved={() => {
+            setShowModal(false);
+            setEditingChannel(null);
+            fetchChannels();
+          }}
         />
       )}
     </div>
   );
 }
 
-function ChannelModal({ channel, onClose, onSaved }: {
+function ChannelModal({
+  channel,
+  onClose,
+  onSaved,
+}: {
   channel: Channel | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    nome: channel?.nome || "",
-    numero: channel?.numero || "",
-    tipo: channel?.tipo || "evolution",
-    unidades: channel?.unidades?.join(", ") || "",
-    responsavel: channel?.responsavel || "",
-    ativo: channel?.ativo ?? true,
+    name: channel?.name || "",
+    whatsapp_number: channel?.whatsapp_number || "",
+    connection_type: channel?.connection_type || "evolution",
+    units: channel?.units?.join(", ") || "",
+    responsible: channel?.responsible || "",
+    active: channel?.active ?? true,
     webhook_url: channel?.webhook_url || "",
-    token: channel?.token || "",
-    descricao: channel?.descricao || "",
+    api_token: channel?.api_token || "",
+    description: channel?.description || "",
   });
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    if (!form.name.trim()) {
+      toast.error("Informe o nome do canal");
+      return;
+    }
     setSaving(true);
     const payload = {
-      nome: form.nome,
-      numero: form.numero || null,
-      tipo: form.tipo,
-      unidades: form.unidades ? form.unidades.split(",").map(u => u.trim()) : [],
-      responsavel: form.responsavel || null,
-      ativo: form.ativo,
+      name: form.name,
+      whatsapp_number: form.whatsapp_number || null,
+      connection_type: form.connection_type,
+      units: form.units ? form.units.split(",").map((u) => u.trim()).filter(Boolean) : [],
+      responsible: form.responsible || null,
+      active: form.active,
       webhook_url: form.webhook_url || null,
-      token: form.token || null,
-      descricao: form.descricao || null,
+      api_token: form.api_token || null,
+      description: form.description || null,
     };
 
-    if (channel) {
-      await supabase.from("channels").update(payload).eq("id", channel.id);
-    } else {
-      await supabase.from("channels").insert({ ...payload, status: "offline" });
-    }
+    const { error } = channel
+      ? await supabase.from("channels").update(payload).eq("id", channel.id)
+      : await supabase.from("channels").insert({ ...payload, status: "offline" });
+
     setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Canal salvo");
     onSaved();
   }
+
+  const field = "w-full mt-1 px-3 py-2 border border-border bg-background rounded-md text-sm";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -333,27 +391,27 @@ function ChannelModal({ channel, onClose, onSaved }: {
           <div>
             <label className="text-sm font-medium">Nome do canal</label>
             <input
-              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.nome}
-              onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              className={field}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Ex: WhatsApp Principal"
             />
           </div>
           <div>
             <label className="text-sm font-medium">Número do WhatsApp</label>
             <input
-              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.numero}
-              onChange={(e) => setForm({ ...form, numero: e.target.value })}
+              className={field}
+              value={form.whatsapp_number}
+              onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
               placeholder="+55 11 90000-0000"
             />
           </div>
           <div>
             <label className="text-sm font-medium">Tipo de conexão</label>
             <select
-              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.tipo}
-              onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+              className={field}
+              value={form.connection_type}
+              onChange={(e) => setForm({ ...form, connection_type: e.target.value })}
             >
               <option value="evolution">Evolution API</option>
               <option value="meta_cloud">Meta Cloud</option>
@@ -362,24 +420,24 @@ function ChannelModal({ channel, onClose, onSaved }: {
           <div>
             <label className="text-sm font-medium">Unidades (separe por vírgula)</label>
             <input
-              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.unidades}
-              onChange={(e) => setForm({ ...form, unidades: e.target.value })}
+              className={field}
+              value={form.units}
+              onChange={(e) => setForm({ ...form, units: e.target.value })}
               placeholder="Matriz, Filial 1"
             />
           </div>
           <div>
             <label className="text-sm font-medium">Responsável</label>
             <input
-              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.responsavel}
-              onChange={(e) => setForm({ ...form, responsavel: e.target.value })}
+              className={field}
+              value={form.responsible}
+              onChange={(e) => setForm({ ...form, responsible: e.target.value })}
             />
           </div>
           <div>
-            <label className="text-sm font-medium">Webhook URL</label>
+            <label className="text-sm font-medium">Webhook URL (n8n)</label>
             <input
-              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              className={field}
               value={form.webhook_url}
               onChange={(e) => setForm({ ...form, webhook_url: e.target.value })}
               placeholder="https://..."
@@ -388,31 +446,32 @@ function ChannelModal({ channel, onClose, onSaved }: {
           <div>
             <label className="text-sm font-medium">Token / API Key</label>
             <input
-              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.token}
-              onChange={(e) => setForm({ ...form, token: e.target.value })}
-              placeholder="Token da Evolution API"
+              className={field}
+              value={form.api_token}
+              onChange={(e) => setForm({ ...form, api_token: e.target.value })}
             />
           </div>
           <div>
             <label className="text-sm font-medium">Descrição</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
-              value={form.descricao}
-              onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+              className={field}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={2}
             />
           </div>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              checked={form.ativo}
-              onChange={(e) => setForm({ ...form, ativo: e.target.checked })}
+              checked={form.active}
+              onChange={(e) => setForm({ ...form, active: e.target.checked })}
             />
             <span className="text-sm">Ativo</span>
           </label>
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
+            <Button variant="outline" className="flex-1" onClick={onClose}>
+              Cancelar
+            </Button>
             <Button className="flex-1" onClick={save} disabled={saving}>
               {saving ? "Salvando..." : "Salvar"}
             </Button>
