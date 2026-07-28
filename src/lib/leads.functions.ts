@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { LEAD_STATUSES, LEAD_TEMPERATURAS } from "./types";
+import { buildSearchFilter } from "@/lib/search-filter";
 
 const leadInputSchema = z.object({
   nome: z.string().min(1),
@@ -60,8 +61,8 @@ export const listLeads = createServerFn({ method: "POST" })
       .range(from, to);
     if (data.status && data.status !== "all") query = query.eq("status", data.status as any);
     if (data.search) {
-      const s = `%${data.search}%`;
-      query = query.or(`nome.ilike.${s},empresa.ilike.${s},email.ilike.${s},telefone.ilike.${s},whatsapp.ilike.${s}`);
+      const filter = buildSearchFilter(data.search);
+      if (filter) query = query.or(filter);
     }
     const { data: rows, count, error } = await query;
     if (error) throw new Error(error.message);
@@ -192,11 +193,12 @@ export const searchLeads = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ q: z.string().min(1) }).parse(data))
   .handler(async ({ data, context }) => {
-    const s = `%${data.q}%`;
+    const filter = buildSearchFilter(data.q);
+    if (!filter) return [];
     const { data: rows } = await context.supabase
       .from("leads")
       .select("id, nome, empresa, email, telefone, status")
-      .or(`nome.ilike.${s},empresa.ilike.${s},email.ilike.${s},telefone.ilike.${s},whatsapp.ilike.${s}`)
+      .or(filter)
       .limit(8);
     return rows ?? [];
   });
@@ -247,8 +249,8 @@ export const sdrQueue = createServerFn({ method: "POST" })
       .not("status", "in", "(ganho,perdido)")
       .limit(500);
     if (data.search) {
-      const s = `%${data.search}%`;
-      query = query.or(`nome.ilike.${s},empresa.ilike.${s},email.ilike.${s},telefone.ilike.${s},whatsapp.ilike.${s}`);
+      const filter = buildSearchFilter(data.search);
+      if (filter) query = query.or(filter);
     }
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
