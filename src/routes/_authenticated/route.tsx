@@ -24,26 +24,23 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
-    
-    // Tenta buscar a role da tabela profiles
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('default_role')
-      .eq('id', data.user.id)
-      .single();
 
-    let role = profile?.default_role || data.user.app_metadata?.role || "agente";
-    
-    // Hardcode mantido para garantir acesso super_admin se necessário
-    if (data.user.id === '708c38d6-5a01-4a73-875e-db33f6a8ee73') {
-      role = 'super_admin';
-    }
-    
-    return { 
-      user: data.user,
-      role: role.replace("-", "_")
-    };
+    // Fonte da verdade: tabela user_roles (protegida por RLS, só super admin altera)
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id);
+
+    const list = (roles ?? []).map((r) => r.role as string);
+    const role = list.includes("super_admin")
+      ? "super_admin"
+      : list.includes("admin")
+        ? "admin"
+        : "agente";
+
+    return { user: data.user, role };
   },
+
   component: AuthLayout,
 });
 

@@ -52,10 +52,13 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          instance_name: string | null
+          last_sync_at: string | null
           name: string
           responsible: string | null
           status: string | null
           unit: string | null
+          units: string[]
           updated_at: string | null
           webhook_url: string | null
           whatsapp_number: string | null
@@ -67,10 +70,13 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          instance_name?: string | null
+          last_sync_at?: string | null
           name: string
           responsible?: string | null
           status?: string | null
           unit?: string | null
+          units?: string[]
           updated_at?: string | null
           webhook_url?: string | null
           whatsapp_number?: string | null
@@ -82,10 +88,13 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          instance_name?: string | null
+          last_sync_at?: string | null
           name?: string
           responsible?: string | null
           status?: string | null
           unit?: string | null
+          units?: string[]
           updated_at?: string | null
           webhook_url?: string | null
           whatsapp_number?: string | null
@@ -678,6 +687,85 @@ export type Database = {
         }
         Relationships: []
       }
+      support_ticket_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          ticket_id: string
+          user_id?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_comments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          priority: string
+          status: string
+          subject: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          description: string
+          id?: string
+          priority?: string
+          status?: string
+          subject: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          priority?: string
+          status?: string
+          subject?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           cancelled_at: string | null
@@ -883,6 +971,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_app_role: { Args: never; Returns: string }
       get_current_user_role: {
         Args: { user_uuid: string }
         Returns: {
@@ -896,6 +985,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_or_above: { Args: { _user_id?: string }; Returns: boolean }
+      is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "member" | "super_admin" | "agente"

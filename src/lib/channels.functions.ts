@@ -57,17 +57,16 @@ export const createChannel = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => channelInputSchema.parse(data))
   .handler(async ({ data, context }) => {
     const payload = {
-      nome: data.nome,
-      numero: clean(data.numero),
-      tipo: data.tipo,
+      name: data.nome,
+      whatsapp_number: clean(data.numero),
+      connection_type: data.tipo,
       status: data.status,
-      descricao: clean(data.descricao),
+      description: clean(data.descricao),
       webhook_url: clean(data.webhook_url),
-      token: clean(data.token),
-      unidades: data.unidades ?? [],
-      responsavel: clean(data.responsavel),
-      ativo: data.ativo,
-      created_by: context.userId,
+      api_token: clean(data.token),
+      units: data.unidades ?? [],
+      responsible: clean(data.responsavel),
+      active: data.ativo,
     };
     const { data: row, error } = await context.supabase
       .from("channels")
@@ -84,10 +83,24 @@ export const updateChannel = createServerFn({ method: "POST" })
     channelInputSchema.partial().extend({ id: z.string().uuid() }).parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { id, ...rest } = data;
-    const patch: any = { ...rest };
-    for (const k of ["numero", "descricao", "webhook_url", "token", "responsavel"]) {
-      if (k in patch) patch[k] = clean(patch[k]);
+    const { id, ...rest } = data as any;
+    const map: Record<string, string> = {
+      nome: "name",
+      numero: "whatsapp_number",
+      tipo: "connection_type",
+      descricao: "description",
+      token: "api_token",
+      unidades: "units",
+      responsavel: "responsible",
+      ativo: "active",
+      status: "status",
+      webhook_url: "webhook_url",
+    };
+    const nullable = new Set(["whatsapp_number", "description", "webhook_url", "api_token", "responsible"]);
+    const patch: any = {};
+    for (const [k, v] of Object.entries(rest)) {
+      const col = map[k] ?? k;
+      patch[col] = nullable.has(col) ? clean(v as any) : v;
     }
     const { data: row, error } = await context.supabase
       .from("channels")
@@ -107,7 +120,7 @@ export const toggleChannelActive = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("channels")
-      .update({ ativo: data.ativo, status: data.ativo ? "conectando" : "offline" } as any)
+      .update({ active: data.ativo, status: data.ativo ? "conectando" : "offline" } as any)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };

@@ -71,7 +71,7 @@ function TeamsPage() {
       setLoading(true);
       const { data, error } = await supabase.from("teams").select("*").order("name");
       if (error) throw error;
-      setTeams(data || []);
+      setTeams((data ?? []) as unknown as Team[]);
       
       if (data && data.length > 0 && !selectedTeam) {
         setSelectedTeam(data[0].id);
@@ -84,7 +84,7 @@ function TeamsPage() {
           .select("*, profile:profiles(id, email, full_name)")
           .eq("team_id", team.id)
           .order("role");
-        membersMap[team.id] = membs || [];
+        membersMap[team.id] = (membs ?? []) as unknown as TeamMember[];
       }
       setMembers(membersMap);
     } catch (err) {
