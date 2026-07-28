@@ -1,22 +1,49 @@
-## Plano para destravar seu acesso
+# Diagnóstico (verificado no projeto)
 
-Como você já confirmou o email, o problema pode estar em uma destas três frentes: confirmação não registrada no backend, redirecionamento/sessão após confirmação, ou tela de login tratando o erro de forma confusa.
+**1. Evolution API não conecta**
+- A tela de Canais chama `/api/evolution-proxy?...`. Esse arquivo existe em `api/evolution-proxy.ts` no formato Vercel, que **não é servido** por este projeto (TanStack Start). Logo, toda chamada de QR Code retorna 404 / HTML — por isso nada acontece.
+- As credenciais `EVOLUTION_API_URL` e `EVOLUTION_API_KEY` **não estão cadastradas** no backend.
+- A tela de Canais grava campos `nome`, `numero`, `tipo`, `unidades`, `token`, `descricao`, mas a tabela `channels` tem `name`, `whatsapp_number`, `connection_type`, `unit`, `api_token`, `description`. Ou seja, criar/editar canal falha silenciosamente (tabela está vazia hoje).
 
-## O que vou verificar e ajustar
+**2. Página de Suporte com erro**
+- A página consulta a tabela `support_tickets`, que **não existe** no banco. Toda a listagem e criação de chamado falha.
 
-1. **Conferir o estado real do login**
-   - Revisar os logs mais recentes de autenticação para ver se o erro ainda é `Email not confirmed`, `Invalid credentials`, bloqueio por limite de envio, ou outro erro.
-   - Validar se a confirmação do email foi registrada para essa conta.
+**3. Permissões**
+- A hierarquia é lida de `profiles.default_role`, e a política da tabela `profiles` é `ALL ... USING (true)` para qualquer autenticado — ou seja, **qualquer usuário pode editar o próprio papel e virar super admin**. Falha grave.
+- O acesso super admin está *hardcoded* por UUID no código do layout.
+- A tabela correta (`user_roles` + função `has_role`) existe mas **não é usada** para controlar nada.
+- O enum `app_role` tem `admin, member, super_admin, agente`; o menu ainda cita papéis inexistentes (`gerente`, `sdr`, `recepcao`).
 
-2. **Corrigir o fluxo conforme o erro encontrado**
-   - Se o backend ainda marcar como não confirmado: liberar o fluxo de teste do MVP ou ajustar o reenvio/confirmação.
-   - Se o email já estiver confirmado: corrigir o redirecionamento pós-login para levar ao dashboard.
-   - Se o login funcionar mas a área interna bloquear: corrigir a criação automática de perfil/permissão, porque o projeto tem a função de criar usuário, mas os dados mostram que o gatilho de criação automática pode não estar ativo.
+---
 
-3. **Melhorar mensagens na tela de acesso**
-   - Mostrar mensagens claras em português para: email não confirmado, credenciais inválidas, limite de tentativas, cadastro já existente e sucesso de cadastro.
+# Plano
 
-4. **Validar o caminho completo**
-   - Entrar com uma conta confirmada.
-   - Confirmar acesso ao dashboard.
-   - Confirmar que a navegação para Leads/Pipeline funciona sem bloquear.
+## Etapa 1 — Permissões e hierarquia (base de tudo)
+Hierarquia definida: **Super Admin** (só você) > **Admin** (cliente/gerente) > **Agente**.
+
+- Migração: limpar o enum para `super_admin | admin | agente`; passar a fonte da verdade para `user_roles`.
+- Bloquear escalonamento: `profiles` deixa de permitir edição do papel; `user_roles` só pode ser alterada por super admin (política via `has_role`).
+- Funções `is_super_admin()` / `has_role()` usadas em todas as políticas sensíveis.
+- Regras de acesso:
+  - **Super Admin**: tudo, incluindo Configurações, Canais, Equipes e gestão de usuários/papéis.
+  - **Admin**: opera e gerencia dados do cliente (leads, contatos, tarefas, conversas, equipes, templates, canais em modo leitura/uso), **não** altera papéis nem configurações globais.
+  - **Agente**: leads, contatos, conversas, tarefas, fila SDR, prioridades, perfil e suporte.
+- Layout `_authenticated`: remover o UUID hardcoded, ler papel de `user_roles`, e bloquear rotas por papel (não apenas esconder do menu).
+- Nova tela **Usuários** (só super admin) para atribuir papéis.
+
+## Etapa 2 — Suporte
+- Migração criando `support_tickets` (assunto, descrição, status, prioridade, criado por, atribuído a, equipe) + comentários do chamado, com GRANTs e RLS: cada usuário vê os próprios chamados; admin/super admin veem e gerenciam todos.
+- Ajustar a página `/support` para tratar erro de forma visível em vez de tela vazia.
+
+## Etapa 3 — Evolution API (conexão real)
+- Solicitar com segurança `EVOLUTION_API_URL` e `EVOLUTION_API_KEY`.
+- Criar rota de servidor real em `src/routes/api/evolution/...` (substituindo o arquivo Vercel morto) com ações: criar instância, conectar/QR, status, logout, enviar mensagem — protegida por autenticação e limitada a admin/super admin.
+- Corrigir o mapeamento de colunas da tabela `channels` em `channels.functions.ts` e na tela `/channels` (nome↔name, numero↔whatsapp_number, tipo↔connection_type, token↔api_token, descricao↔description, unidade).
+- Salvar `instance_name` por canal, exibir QR Code, fazer polling de status e gravar em `channel_logs`.
+- Registrar o webhook da instância apontando para os endpoints públicos já existentes (`/api/public/webhooks/...`) para receber mensagens via n8n/Evolution.
+- Botão "Testar conexão" passando a chamar a Evolution de verdade.
+
+## Detalhes técnicos
+- Chamadas à Evolution ficam sempre no servidor (chave nunca vai ao navegador).
+- Remover `api/evolution-proxy.ts` (código morto de outra plataforma).
+- Sem mudanças de identidade visual; apenas correções e as duas telas novas (Usuários e ajustes de Suporte).
