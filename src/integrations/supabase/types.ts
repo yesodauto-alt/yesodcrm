@@ -561,13 +561,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_lead_conversations_channel"
-            columns: ["channel_id"]
-            isOneToOne: false
-            referencedRelation: "channels"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "lead_conversations_channel_id_fkey"
             columns: ["channel_id"]
             isOneToOne: false
@@ -1251,6 +1244,7 @@ export type Database = {
         Returns: boolean
       }
       current_app_role: { Args: never; Returns: string }
+      current_unidade: { Args: never; Returns: string }
       get_current_user_role: {
         Args: { user_uuid: string }
         Returns: {
