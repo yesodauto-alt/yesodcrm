@@ -568,6 +568,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "lead_conversations_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lead_conversations_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
