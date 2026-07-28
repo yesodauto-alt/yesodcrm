@@ -134,17 +134,42 @@ export function AssistantConfigDialog({
     if (!kb || !docTitle.trim()) return;
     setBusyDocs(true);
     try {
+      let filePath: string | null = null;
+      if (docFile) {
+        const safeName = docFile.name.replace(/[^\w.\-]+/g, "_");
+        const path = `${kb.id}/${crypto.randomUUID()}-${safeName}`;
+        const { error: upErr } = await supabase.storage
+          .from("knowledge-docs")
+          .upload(path, docFile, { upsert: false });
+        if (upErr) throw new Error(upErr.message);
+        filePath = path;
+      }
       const row = await saveDoc({
-        data: { knowledge_base_id: kb.id, title: docTitle, content: docContent },
+        data: {
+          knowledge_base_id: kb.id,
+          title: docTitle,
+          content: docContent,
+          file_path: filePath,
+        },
       });
       setDocs((d) => [row as any, ...d]);
       setDocTitle("");
       setDocContent("");
+      setDocFile(null);
       toast.success("Documento adicionado");
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao adicionar documento");
     } finally {
       setBusyDocs(false);
+    }
+  }
+
+  async function handleDownload(path: string) {
+    try {
+      const { url } = (await fileUrl({ data: { path } })) as any;
+      window.open(url, "_blank", "noopener");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao abrir arquivo");
     }
   }
 
