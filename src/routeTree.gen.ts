@@ -42,6 +42,7 @@ import { Route as ApiPublicWebhooksChannelStatusRouteImport } from './routes/api
 import { Route as ApiPublicWebhooksAiAnalysisRouteImport } from './routes/api/public/webhooks/ai-analysis'
 import { Route as ApiPublicLeadsIdStatusRouteImport } from './routes/api/public/leads/$id/status'
 import { Route as ApiPublicLeadsIdNoteRouteImport } from './routes/api/public/leads/$id/note'
+import { Route as ApiPublicConversationsIdMessagesRouteImport } from './routes/api/public/conversations/$id/messages'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -221,6 +222,12 @@ const ApiPublicLeadsIdNoteRoute = ApiPublicLeadsIdNoteRouteImport.update({
   path: '/api/public/leads/$id/note',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicConversationsIdMessagesRoute =
+  ApiPublicConversationsIdMessagesRouteImport.update({
+    id: '/api/public/conversations/$id/messages',
+    path: '/api/public/conversations/$id/messages',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/api/public/contacts/': typeof ApiPublicContactsIndexRoute
   '/api/public/conversations/': typeof ApiPublicConversationsIndexRoute
   '/api/public/leads/': typeof ApiPublicLeadsIndexRoute
+  '/api/public/conversations/$id/messages': typeof ApiPublicConversationsIdMessagesRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
 }
@@ -287,6 +295,7 @@ export interface FileRoutesByTo {
   '/api/public/contacts': typeof ApiPublicContactsIndexRoute
   '/api/public/conversations': typeof ApiPublicConversationsIndexRoute
   '/api/public/leads': typeof ApiPublicLeadsIndexRoute
+  '/api/public/conversations/$id/messages': typeof ApiPublicConversationsIdMessagesRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
 }
@@ -323,6 +332,7 @@ export interface FileRoutesById {
   '/api/public/contacts/': typeof ApiPublicContactsIndexRoute
   '/api/public/conversations/': typeof ApiPublicConversationsIndexRoute
   '/api/public/leads/': typeof ApiPublicLeadsIndexRoute
+  '/api/public/conversations/$id/messages': typeof ApiPublicConversationsIdMessagesRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
 }
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/api/public/contacts/'
     | '/api/public/conversations/'
     | '/api/public/leads/'
+    | '/api/public/conversations/$id/messages'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
   fileRoutesByTo: FileRoutesByTo
@@ -393,6 +404,7 @@ export interface FileRouteTypes {
     | '/api/public/contacts'
     | '/api/public/conversations'
     | '/api/public/leads'
+    | '/api/public/conversations/$id/messages'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
   id:
@@ -428,6 +440,7 @@ export interface FileRouteTypes {
     | '/api/public/contacts/'
     | '/api/public/conversations/'
     | '/api/public/leads/'
+    | '/api/public/conversations/$id/messages'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
   fileRoutesById: FileRoutesById
@@ -449,6 +462,7 @@ export interface RootRouteChildren {
   ApiPublicContactsIndexRoute: typeof ApiPublicContactsIndexRoute
   ApiPublicConversationsIndexRoute: typeof ApiPublicConversationsIndexRoute
   ApiPublicLeadsIndexRoute: typeof ApiPublicLeadsIndexRoute
+  ApiPublicConversationsIdMessagesRoute: typeof ApiPublicConversationsIdMessagesRoute
   ApiPublicLeadsIdNoteRoute: typeof ApiPublicLeadsIdNoteRoute
   ApiPublicLeadsIdStatusRoute: typeof ApiPublicLeadsIdStatusRoute
 }
@@ -686,6 +700,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicLeadsIdNoteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/conversations/$id/messages': {
+      id: '/api/public/conversations/$id/messages'
+      path: '/api/public/conversations/$id/messages'
+      fullPath: '/api/public/conversations/$id/messages'
+      preLoaderRoute: typeof ApiPublicConversationsIdMessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -746,6 +767,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicContactsIndexRoute: ApiPublicContactsIndexRoute,
   ApiPublicConversationsIndexRoute: ApiPublicConversationsIndexRoute,
   ApiPublicLeadsIndexRoute: ApiPublicLeadsIndexRoute,
+  ApiPublicConversationsIdMessagesRoute: ApiPublicConversationsIdMessagesRoute,
   ApiPublicLeadsIdNoteRoute: ApiPublicLeadsIdNoteRoute,
   ApiPublicLeadsIdStatusRoute: ApiPublicLeadsIdStatusRoute,
 }
