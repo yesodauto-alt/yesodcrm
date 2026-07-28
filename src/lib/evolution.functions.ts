@@ -228,11 +228,11 @@ export const disconnectChannelInstance = createServerFn({ method: "POST" })
 export const sendWhatsAppMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({ number: z.string(), text: z.string(), instance: z.string() }).parse(data),
+    z.object({ number: z.string(), text: z.string(), instance: z.string().optional() }).parse(data),
   )
   .handler(async ({ data }) => {
     const cleanNumber = data.number.replace(/\D/g, "");
-    return evoFetch(`/message/sendText/${data.instance}`, {
+    return evoFetch(`/message/sendText/${data.instance || EVOLUTION_INSTANCE}`, {
       method: "POST",
       body: JSON.stringify({
         number: cleanNumber,
@@ -242,3 +242,4 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
       }),
     });
   });
+
