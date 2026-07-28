@@ -13,7 +13,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, KanbanSquare, Settings, User, LogOut, Moon, Sun, Contact, Flame, Radio, MessageSquare, ListChecks, ShieldCheck, FileText, Users2, LifeBuoy, Bot } from "lucide-react";
+import { LayoutDashboard, Users, KanbanSquare, Settings, User, LogOut, Moon, Sun, Contact, Flame, Radio, MessageSquare, ListChecks, ShieldCheck, FileText, Users2, LifeBuoy, Bot, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { GlobalSearch } from "@/components/global-search";
@@ -56,7 +56,9 @@ const allItems = [
   { title: "Equipes", url: "/teams", icon: Users2, roles: ["super_admin", "admin"] },
   { title: "Suporte", url: "/support", icon: LifeBuoy, roles: ["super_admin", "admin", "agente", "gerente", "sdr", "recepcao"] },
   { title: "IA Assistente", url: "/ai-assistant", icon: Bot, roles: ["super_admin", "admin", "agente", "gerente", "sdr", "recepcao"] },
+  { title: "Automações", url: "/automations", icon: Workflow, roles: ["super_admin", "admin"] },
   { title: "Templates", url: "/templates", icon: FileText, roles: ["super_admin", "admin", "agente"] },
+
   { title: "Configurações", url: "/settings", icon: Settings, roles: ["super_admin"] },
   { title: "Perfil", url: "/profile", icon: User, roles: ["super_admin", "admin", "agente"] },
 ];

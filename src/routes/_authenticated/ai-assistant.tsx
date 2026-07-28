@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,8 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot, Send, Loader2, Zap, Users, Phone, BarChart3, Headphones } from "lucide-react";
+import { Bot, Send, Loader2, Zap, Users, Phone, BarChart3, Headphones, Settings2 } from "lucide-react";
 import { toast } from "sonner";
+import { ensureAssistants } from "@/lib/ai-config.functions";
+import { AssistantConfigDialog, type AssistantRow } from "@/components/ai/AssistantConfigDialog";
+
 
 export const Route = createFileRoute("/_authenticated/ai-assistant")({
   head: () => ({ meta: [{ title: "IA Assistente — Yesod CRM" }] }),
@@ -58,19 +62,27 @@ const AREAS = [
 ];
 
 function AIAssistantPage() {
+  const { role } = Route.useRouteContext() as { role: string };
+  const ensure = useServerFn(ensureAssistants);
   const [mounted, setMounted] = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [assistants, setAssistants] = useState<AssistantRow[]>([]);
+  const [configTarget, setConfigTarget] = useState<AssistantRow | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    ensure({ data: { sectors: AREAS.map((a) => ({ id: a.id, name: a.name })) } })
+      .then((rows: any) => setAssistants(rows ?? []))
+      .catch(() => setAssistants([]));
   }, []);
 
   const selectedAreaData = AREAS.find((a) => a.id === selectedArea);
   const AreaIcon = selectedAreaData?.icon;
+
 
   async function sendMessage() {
     if (!inputValue.trim() || !selectedArea) return;
@@ -139,22 +151,41 @@ function AIAssistantPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {AREAS.map((area) => {
               const Icon = area.icon;
+              const assistant = assistants.find((a) => a.sector === area.id);
               return (
-                <button
+                <div
                   key={area.id}
-                  onClick={() => setSelectedArea(area.id)}
-                  className={`p-6 rounded-xl border-2 transition-all hover:shadow-lg text-left group ${area.bg} border-transparent hover:border-current`}
+                  className={`p-6 rounded-xl border-2 transition-all hover:shadow-lg ${area.bg} border-transparent`}
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`p-2 rounded-lg ${area.bg}`}>
-                      <Icon className={`h-6 w-6 ${area.color}`} />
+                  <button onClick={() => setSelectedArea(area.id)} className="text-left w-full">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`p-2 rounded-lg ${area.bg}`}>
+                        <Icon className={`h-6 w-6 ${area.color}`} />
+                      </div>
+                      {assistant && (
+                        <Badge variant="secondary" className="text-[10px] uppercase">
+                          {assistant.status}
+                        </Badge>
+                      )}
                     </div>
-                  </div>
-                  <h3 className="font-semibold text-sm mb-1">{area.name}</h3>
-                  <p className="text-xs text-muted-foreground">{area.description}</p>
-                </button>
+                    <h3 className="font-semibold text-sm mb-1">{area.name}</h3>
+                    <p className="text-xs text-muted-foreground">{area.description}</p>
+                  </button>
+                  {assistant && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3 w-full"
+                      onClick={() => setConfigTarget(assistant)}
+                    >
+                      <Settings2 className="h-3.5 w-3.5 mr-2" />
+                      {role === "super_admin" ? "Configurar" : "Base de conhecimento"}
+                    </Button>
+                  )}
+                </div>
               );
             })}
+
           </div>
         </div>
       ) : (
@@ -318,6 +349,18 @@ function AIAssistantPage() {
           </CardContent>
         </Card>
       )}
+
+      <AssistantConfigDialog
+        assistant={configTarget}
+        open={!!configTarget}
+        onOpenChange={(v) => !v && setConfigTarget(null)}
+        canEdit={role === "super_admin"}
+        canEditDocs={role !== "admin"}
+        onSaved={(row) =>
+          setAssistants((prev) => prev.map((a) => (a.id === row.id ? { ...a, ...row } : a)))
+        }
+      />
     </div>
+
   );
 }

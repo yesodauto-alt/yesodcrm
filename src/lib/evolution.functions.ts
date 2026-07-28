@@ -2,23 +2,41 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/** Nome fixo da instância usada pelo CRM. */
+export const EVOLUTION_INSTANCE = "yesodcrm";
+
+function normalizeBaseUrl(raw: string) {
+  let url = raw.trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+  // o servidor da Evolution redireciona http -> https (307), o que quebra POSTs
+  url = url.replace(/^http:\/\//i, "https://");
+  return url;
+}
+
 function evolutionConfig() {
-  const url = process.env.EVOLUTION_API_URL?.replace(/\/$/, "");
+  const rawUrl = process.env.EVOLUTION_API_URL;
   const key = process.env.EVOLUTION_API_KEY;
-  if (!url || !key) {
+  if (!rawUrl || !key) {
     throw new Error(
       "Evolution API não configurada. Cadastre EVOLUTION_API_URL e EVOLUTION_API_KEY.",
     );
   }
-  return { url, key };
+  return { url: normalizeBaseUrl(rawUrl), key };
 }
 
 async function evoFetch(path: string, init?: RequestInit) {
   const { url, key } = evolutionConfig();
-  const res = await fetch(`${url}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", apikey: key, ...(init?.headers ?? {}) },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${url}${path}`, {
+      ...init,
+      headers: { "Content-Type": "application/json", apikey: key, ...(init?.headers ?? {}) },
+    });
+  } catch (e) {
+    throw new Error(
+      `Não foi possível contatar a Evolution API em ${url} (${e instanceof Error ? e.message : "erro de rede"}).`,
+    );
+  }
   const text = await res.text();
   let body: any = null;
   try {
@@ -27,7 +45,14 @@ async function evoFetch(path: string, init?: RequestInit) {
     body = { message: text };
   }
   if (!res.ok) {
-    throw new Error(body?.message || body?.error || `Evolution API retornou ${res.status}`);
+    const detail =
+      body?.response?.message ??
+      body?.message ??
+      body?.error ??
+      (typeof text === "string" ? text.slice(0, 200) : "");
+    throw new Error(
+      `Evolution API ${res.status} em ${path}${detail ? `: ${Array.isArray(detail) ? detail.join(", ") : detail}` : ""}`,
+    );
   }
   return body;
 }
@@ -40,9 +65,19 @@ async function assertAdmin(context: any) {
   if (!data) throw new Error("Apenas administradores podem gerenciar canais.");
 }
 
-function instanceNameFor(channelId: string, existing?: string | null) {
-  return existing || `yesod_${channelId.replace(/-/g, "").substring(0, 12)}`;
+/** Verifica na Evolution se a instância já existe (evita depender do texto do erro). */
+async function instanceExists(name: string) {
+  try {
+    const list = await evoFetch(`/instance/fetchInstances`);
+    const arr = Array.isArray(list) ? list : (list?.instances ?? []);
+    return arr.some(
+      (i: any) => (i?.name ?? i?.instance?.instanceName ?? i?.instanceName) === name,
+    );
+  } catch {
+    return false;
+  }
 }
+
 
 function extractQr(payload: any): string | null {
   const raw =
@@ -73,26 +108,48 @@ export const connectChannelInstance = createServerFn({ method: "POST" })
       .single();
     if (error || !channel) throw new Error("Canal não encontrado.");
 
-    const instance = instanceNameFor(channel.id, channel.instance_name);
+    const instance = EVOLUTION_INSTANCE;
 
-    // Cria a instância; se já existir, a Evolution devolve erro e seguimos para o connect.
-    try {
+    if (!(await instanceExists(instance))) {
       await evoFetch("/instance/create", {
         method: "POST",
         body: JSON.stringify({
           instanceName: instance,
           qrcode: true,
           integration: "WHATSAPP-BAILEYS",
-          ...(channel.webhook_url ? { webhook: { url: channel.webhook_url, byEvents: false } } : {}),
+          ...(channel.webhook_url
+            ? {
+                webhook: {
+                  url: channel.webhook_url,
+                  byEvents: false,
+                  events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE"],
+                },
+              }
+            : {}),
         }),
       });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "";
-      if (!/already|exists|in use/i.test(msg)) throw e;
+    } else if (channel.webhook_url) {
+      // mantém o webhook do n8n sincronizado com o cadastro do canal
+      try {
+        await evoFetch(`/webhook/set/${instance}`, {
+          method: "POST",
+          body: JSON.stringify({
+            webhook: {
+              enabled: true,
+              url: channel.webhook_url,
+              byEvents: false,
+              events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE"],
+            },
+          }),
+        });
+      } catch {
+        /* não bloqueia o pareamento */
+      }
     }
 
     const connectPayload = await evoFetch(`/instance/connect/${instance}`);
     const qrcode = extractQr(connectPayload);
+
 
     await context.supabase
       .from("channels")
@@ -120,16 +177,17 @@ export const channelInstanceStatus = createServerFn({ method: "POST" })
       .eq("id", data.channelId)
       .single();
     if (error || !channel) throw new Error("Canal não encontrado.");
-    if (!channel.instance_name) return { state: "close", status: "offline" as const };
+    const instance = channel.instance_name || EVOLUTION_INSTANCE;
 
-    const payload = await evoFetch(`/instance/connectionState/${channel.instance_name}`);
+    const payload = await evoFetch(`/instance/connectionState/${instance}`);
     const state = payload?.instance?.state ?? payload?.state ?? "close";
     const status = state === "open" ? "online" : state === "connecting" ? "conectando" : "offline";
 
     await context.supabase
       .from("channels")
-      .update({ status, last_sync_at: new Date().toISOString() })
+      .update({ status, instance_name: instance, last_sync_at: new Date().toISOString() })
       .eq("id", channel.id);
+
 
     return { state, status };
   });
@@ -148,13 +206,13 @@ export const disconnectChannelInstance = createServerFn({ method: "POST" })
       .single();
     if (error || !channel) throw new Error("Canal não encontrado.");
 
-    if (channel.instance_name) {
-      try {
-        await evoFetch(`/instance/logout/${channel.instance_name}`, { method: "DELETE" });
-      } catch {
-        /* instância já pode estar desconectada */
-      }
+    const instance = channel.instance_name || EVOLUTION_INSTANCE;
+    try {
+      await evoFetch(`/instance/logout/${instance}`, { method: "DELETE" });
+    } catch {
+      /* instância já pode estar desconectada */
     }
+
 
     await context.supabase.from("channels").update({ status: "offline" }).eq("id", channel.id);
     await context.supabase.from("channel_logs").insert({
@@ -170,11 +228,11 @@ export const disconnectChannelInstance = createServerFn({ method: "POST" })
 export const sendWhatsAppMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({ number: z.string(), text: z.string(), instance: z.string() }).parse(data),
+    z.object({ number: z.string(), text: z.string(), instance: z.string().optional() }).parse(data),
   )
   .handler(async ({ data }) => {
     const cleanNumber = data.number.replace(/\D/g, "");
-    return evoFetch(`/message/sendText/${data.instance}`, {
+    return evoFetch(`/message/sendText/${data.instance || EVOLUTION_INSTANCE}`, {
       method: "POST",
       body: JSON.stringify({
         number: cleanNumber,
@@ -184,3 +242,4 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
       }),
     });
   });
+
