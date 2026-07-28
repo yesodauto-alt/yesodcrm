@@ -136,7 +136,7 @@ function ConversationsPage() {
                 </div>
                 <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
                   {c.numero && <span>📱 {c.numero}</span>}
-                  {c.channels?.nome && <span className="flex items-center gap-1"><Radio className="h-3 w-3" />{c.channels.nome}</span>}
+                  {c.channels?.name && <span className="flex items-center gap-1"><Radio className="h-3 w-3" />{c.channels.name}</span>}
                   {c.responsavel && <span className="flex items-center gap-1"><User className="h-3 w-3" />{c.responsavel}</span>}
                   <span>
                     {format(new Date(c.last_message_at ?? c.occurred_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
