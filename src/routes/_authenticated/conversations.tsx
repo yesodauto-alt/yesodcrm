@@ -2,13 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listAllConversations, getConversation } from "@/lib/conversations.functions";
+import { syncConversations } from "@/lib/evolution-sync.functions";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { MessageSquare, Search, Radio, User } from "lucide-react";
+import { MessageSquare, Search, Radio, User, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TEMPERATURA_COLORS, TEMPERATURA_LABELS } from "@/lib/types";
@@ -27,25 +29,58 @@ function ConversationsPage() {
   const { open } = Route.useSearch();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
   const list = useServerFn(listAllConversations);
-  const { data } = useQuery({
+  const { data, refetch } = useQuery({
     queryKey: ["conversations-all", { search, status }],
     queryFn: () => list({ data: { search, status } }),
     refetchInterval: 30_000,
   });
 
+  async function handleSync() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await syncConversations(50);
+      setSyncResult(`${res.conversations} conversas, ${res.messages} mensagens importadas`);
+      refetch();
+    } catch (err: any) {
+      setSyncResult(`Erro: ${err.message}`);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          Conversas
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Todas as conversas processadas via n8n. Clique para ver o histórico completo.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Conversas
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Todas as conversas processadas via n8n. Clique para ver o histórico completo.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleSync}
+            disabled={syncing}
+            variant="outline"
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Sincronizando..." : "Sincronizar"}
+          </Button>
+          {syncResult && (
+            <span className={`text-sm ${syncResult.startsWith("Erro") ? "text-red-500" : "text-green-600"}`}>
+              {syncResult}
+            </span>
+          )}
+        </div>
       </div>
-
       <Card className="p-3">
         <div className="flex flex-wrap gap-2">
           <div className="relative flex-1 min-w-[220px]">
@@ -69,7 +104,6 @@ function ConversationsPage() {
           </Select>
         </div>
       </Card>
-
       <div className="grid gap-2">
         {(data ?? []).map((c: any) => (
           <Card
@@ -105,11 +139,13 @@ function ConversationsPage() {
         ))}
         {(data ?? []).length === 0 && (
           <Card className="p-8 text-center text-sm text-muted-foreground">
-            Nenhuma conversa registrada ainda. Assim que o n8n enviar dados via webhook, elas aparecem aqui.
+            <p className="text-lg">Nenhuma conversa importada ainda</p>
+            <p className="text-sm mt-1">
+              Clique em <strong>Sincronizar</strong> pra buscar as conversas do WhatsApp
+            </p>
           </Card>
         )}
       </div>
-
       <ConversationDrawer id={open ?? null} onClose={() => nav({ search: {} })} />
     </div>
   );
@@ -125,7 +161,6 @@ function ConversationDrawer({ id, onClose }: { id: string | null; onClose: () =>
   });
   const conv = data?.conversation as any;
   const messages = data?.messages ?? [];
-
   return (
     <Sheet open={!!id} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full sm:max-w-xl flex flex-col p-0">
