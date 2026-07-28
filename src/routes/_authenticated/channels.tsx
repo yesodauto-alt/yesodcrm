@@ -373,7 +373,6 @@ function ChannelModal({
   const [form, setForm] = useState({
     name: channel?.name || "",
     whatsapp_number: channel?.whatsapp_number || "",
-    connection_type: channel?.connection_type || "evolution",
     units: channel?.units?.join(", ") || "",
     responsible: channel?.responsible || "",
     active: channel?.active ?? true,
@@ -390,7 +389,7 @@ function ChannelModal({
     const payload = {
       name: form.name,
       whatsapp_number: form.whatsapp_number || null,
-      connection_type: form.connection_type,
+      connection_type: "evolution",
       units: form.units ? form.units.split(",").map((u) => u.trim()).filter(Boolean) : [],
       responsible: form.responsible || null,
       active: form.active,
@@ -438,16 +437,8 @@ function ChannelModal({
               placeholder="+55 11 90000-0000"
             />
           </div>
-          <div>
-            <label className="text-sm font-medium">Tipo de conexão</label>
-            <select
-              className={field}
-              value={form.connection_type}
-              onChange={(e) => setForm({ ...form, connection_type: e.target.value })}
-            >
-              <option value="evolution">Evolution API</option>
-              <option value="meta_cloud">Meta Cloud</option>
-            </select>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+            Evolution API · instância yesodcrm
           </div>
           <div>
             <label className="text-sm font-medium">Unidades (separe por vírgula)</label>
