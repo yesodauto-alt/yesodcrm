@@ -151,22 +151,41 @@ function AIAssistantPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {AREAS.map((area) => {
               const Icon = area.icon;
+              const assistant = assistants.find((a) => a.sector === area.id);
               return (
-                <button
+                <div
                   key={area.id}
-                  onClick={() => setSelectedArea(area.id)}
-                  className={`p-6 rounded-xl border-2 transition-all hover:shadow-lg text-left group ${area.bg} border-transparent hover:border-current`}
+                  className={`p-6 rounded-xl border-2 transition-all hover:shadow-lg ${area.bg} border-transparent`}
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`p-2 rounded-lg ${area.bg}`}>
-                      <Icon className={`h-6 w-6 ${area.color}`} />
+                  <button onClick={() => setSelectedArea(area.id)} className="text-left w-full">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`p-2 rounded-lg ${area.bg}`}>
+                        <Icon className={`h-6 w-6 ${area.color}`} />
+                      </div>
+                      {assistant && (
+                        <Badge variant="secondary" className="text-[10px] uppercase">
+                          {assistant.status}
+                        </Badge>
+                      )}
                     </div>
-                  </div>
-                  <h3 className="font-semibold text-sm mb-1">{area.name}</h3>
-                  <p className="text-xs text-muted-foreground">{area.description}</p>
-                </button>
+                    <h3 className="font-semibold text-sm mb-1">{area.name}</h3>
+                    <p className="text-xs text-muted-foreground">{area.description}</p>
+                  </button>
+                  {assistant && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3 w-full"
+                      onClick={() => setConfigTarget(assistant)}
+                    >
+                      <Settings2 className="h-3.5 w-3.5 mr-2" />
+                      {role === "super_admin" ? "Configurar" : "Base de conhecimento"}
+                    </Button>
+                  )}
+                </div>
               );
             })}
+
           </div>
         </div>
       ) : (
