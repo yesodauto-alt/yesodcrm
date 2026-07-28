@@ -28,6 +28,7 @@ import { Route as AuthenticatedChannelsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenticated/automations'
 import { Route as AuthenticatedAiAssistantRouteImport } from './routes/_authenticated/ai-assistant'
 import { Route as ApiPublicLeadsIndexRouteImport } from './routes/api/public/leads/index'
+import { Route as ApiPublicContactsIndexRouteImport } from './routes/api/public/contacts/index'
 import { Route as ApiPublicWebhooksUpsertConversationRouteImport } from './routes/api/public/webhooks/upsert-conversation'
 import { Route as ApiPublicWebhooksUpdateTaskRouteImport } from './routes/api/public/webhooks/update-task'
 import { Route as ApiPublicWebhooksUpdateLeadRouteImport } from './routes/api/public/webhooks/update-lead'
@@ -138,6 +139,11 @@ const ApiPublicLeadsIndexRoute = ApiPublicLeadsIndexRouteImport.update({
   path: '/api/public/leads/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicContactsIndexRoute = ApiPublicContactsIndexRouteImport.update({
+  id: '/api/public/contacts/',
+  path: '/api/public/contacts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWebhooksUpsertConversationRoute =
   ApiPublicWebhooksUpsertConversationRouteImport.update({
     id: '/api/public/webhooks/upsert-conversation',
@@ -237,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
   '/api/public/webhooks/update-task': typeof ApiPublicWebhooksUpdateTaskRoute
   '/api/public/webhooks/upsert-conversation': typeof ApiPublicWebhooksUpsertConversationRoute
+  '/api/public/contacts/': typeof ApiPublicContactsIndexRoute
   '/api/public/leads/': typeof ApiPublicLeadsIndexRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
@@ -269,6 +276,7 @@ export interface FileRoutesByTo {
   '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
   '/api/public/webhooks/update-task': typeof ApiPublicWebhooksUpdateTaskRoute
   '/api/public/webhooks/upsert-conversation': typeof ApiPublicWebhooksUpsertConversationRoute
+  '/api/public/contacts': typeof ApiPublicContactsIndexRoute
   '/api/public/leads': typeof ApiPublicLeadsIndexRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   '/api/public/webhooks/update-lead': typeof ApiPublicWebhooksUpdateLeadRoute
   '/api/public/webhooks/update-task': typeof ApiPublicWebhooksUpdateTaskRoute
   '/api/public/webhooks/upsert-conversation': typeof ApiPublicWebhooksUpsertConversationRoute
+  '/api/public/contacts/': typeof ApiPublicContactsIndexRoute
   '/api/public/leads/': typeof ApiPublicLeadsIndexRoute
   '/api/public/leads/$id/note': typeof ApiPublicLeadsIdNoteRoute
   '/api/public/leads/$id/status': typeof ApiPublicLeadsIdStatusRoute
@@ -337,6 +346,7 @@ export interface FileRouteTypes {
     | '/api/public/webhooks/update-lead'
     | '/api/public/webhooks/update-task'
     | '/api/public/webhooks/upsert-conversation'
+    | '/api/public/contacts/'
     | '/api/public/leads/'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/api/public/webhooks/update-lead'
     | '/api/public/webhooks/update-task'
     | '/api/public/webhooks/upsert-conversation'
+    | '/api/public/contacts'
     | '/api/public/leads'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
@@ -402,6 +413,7 @@ export interface FileRouteTypes {
     | '/api/public/webhooks/update-lead'
     | '/api/public/webhooks/update-task'
     | '/api/public/webhooks/upsert-conversation'
+    | '/api/public/contacts/'
     | '/api/public/leads/'
     | '/api/public/leads/$id/note'
     | '/api/public/leads/$id/status'
@@ -421,6 +433,7 @@ export interface RootRouteChildren {
   ApiPublicWebhooksUpdateLeadRoute: typeof ApiPublicWebhooksUpdateLeadRoute
   ApiPublicWebhooksUpdateTaskRoute: typeof ApiPublicWebhooksUpdateTaskRoute
   ApiPublicWebhooksUpsertConversationRoute: typeof ApiPublicWebhooksUpsertConversationRoute
+  ApiPublicContactsIndexRoute: typeof ApiPublicContactsIndexRoute
   ApiPublicLeadsIndexRoute: typeof ApiPublicLeadsIndexRoute
   ApiPublicLeadsIdNoteRoute: typeof ApiPublicLeadsIdNoteRoute
   ApiPublicLeadsIdStatusRoute: typeof ApiPublicLeadsIdStatusRoute
@@ -559,6 +572,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/leads'
       fullPath: '/api/public/leads/'
       preLoaderRoute: typeof ApiPublicLeadsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/contacts/': {
+      id: '/api/public/contacts/'
+      path: '/api/public/contacts'
+      fullPath: '/api/public/contacts/'
+      preLoaderRoute: typeof ApiPublicContactsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/upsert-conversation': {
@@ -702,6 +722,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicWebhooksUpdateTaskRoute: ApiPublicWebhooksUpdateTaskRoute,
   ApiPublicWebhooksUpsertConversationRoute:
     ApiPublicWebhooksUpsertConversationRoute,
+  ApiPublicContactsIndexRoute: ApiPublicContactsIndexRoute,
   ApiPublicLeadsIndexRoute: ApiPublicLeadsIndexRoute,
   ApiPublicLeadsIdNoteRoute: ApiPublicLeadsIdNoteRoute,
   ApiPublicLeadsIdStatusRoute: ApiPublicLeadsIdStatusRoute,
