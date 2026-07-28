@@ -177,16 +177,17 @@ export const channelInstanceStatus = createServerFn({ method: "POST" })
       .eq("id", data.channelId)
       .single();
     if (error || !channel) throw new Error("Canal não encontrado.");
-    if (!channel.instance_name) return { state: "close", status: "offline" as const };
+    const instance = channel.instance_name || EVOLUTION_INSTANCE;
 
-    const payload = await evoFetch(`/instance/connectionState/${channel.instance_name}`);
+    const payload = await evoFetch(`/instance/connectionState/${instance}`);
     const state = payload?.instance?.state ?? payload?.state ?? "close";
     const status = state === "open" ? "online" : state === "connecting" ? "conectando" : "offline";
 
     await context.supabase
       .from("channels")
-      .update({ status, last_sync_at: new Date().toISOString() })
+      .update({ status, instance_name: instance, last_sync_at: new Date().toISOString() })
       .eq("id", channel.id);
+
 
     return { state, status };
   });
