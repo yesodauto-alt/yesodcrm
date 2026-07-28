@@ -65,20 +65,6 @@ async function assertAdmin(context: any) {
   if (!data) throw new Error("Apenas administradores podem gerenciar canais.");
 }
 
-/** Verifica na Evolution se a instância já existe (evita depender do texto do erro). */
-async function instanceExists(name: string) {
-  try {
-    const list = await evoFetch(`/instance/fetchInstances`);
-    const arr = Array.isArray(list) ? list : (list?.instances ?? []);
-    return arr.some(
-      (i: any) => (i?.name ?? i?.instance?.instanceName ?? i?.instanceName) === name,
-    );
-  } catch {
-    return false;
-  }
-}
-
-
 function extractQr(payload: any): string | null {
   const raw =
     payload?.qrcode?.base64 ??
@@ -91,10 +77,20 @@ function extractQr(payload: any): string | null {
   return raw.startsWith("data:") ? raw : `data:image/png;base64,${raw}`;
 }
 
+function extractState(payload: any): string {
+  return payload?.instance?.state ?? payload?.state ?? payload?.instance?.connectionStatus ?? "close";
+}
+
+function mapEvolutionState(state: string) {
+  if (state === "open") return "online";
+  if (state === "connecting") return "conectando";
+  return "offline";
+}
+
 const idInput = (data: { channelId: string }) =>
   z.object({ channelId: z.string().uuid() }).parse(data);
 
-/** Cria (se necessário) a instância na Evolution e devolve o QR Code para pareamento. */
+/** Usa somente a instância fixa da Evolution e devolve QR Code quando ela não estiver conectada. */
 export const connectChannelInstance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(idInput)
@@ -103,67 +99,39 @@ export const connectChannelInstance = createServerFn({ method: "POST" })
 
     const { data: channel, error } = await context.supabase
       .from("channels")
-      .select("id, instance_name, webhook_url")
+      .select("id, instance_name")
       .eq("id", data.channelId)
       .single();
     if (error || !channel) throw new Error("Canal não encontrado.");
 
     const instance = EVOLUTION_INSTANCE;
-
-    if (!(await instanceExists(instance))) {
-      await evoFetch("/instance/create", {
-        method: "POST",
-        body: JSON.stringify({
-          instanceName: instance,
-          qrcode: true,
-          integration: "WHATSAPP-BAILEYS",
-          ...(channel.webhook_url
-            ? {
-                webhook: {
-                  url: channel.webhook_url,
-                  byEvents: false,
-                  events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE"],
-                },
-              }
-            : {}),
-        }),
-      });
-    } else if (channel.webhook_url) {
-      // mantém o webhook do n8n sincronizado com o cadastro do canal
-      try {
-        await evoFetch(`/webhook/set/${instance}`, {
-          method: "POST",
-          body: JSON.stringify({
-            webhook: {
-              enabled: true,
-              url: channel.webhook_url,
-              byEvents: false,
-              events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE"],
-            },
-          }),
-        });
-      } catch {
-        /* não bloqueia o pareamento */
-      }
-    }
-
     const connectPayload = await evoFetch(`/instance/connect/${instance}`);
+    const state = extractState(connectPayload);
+    const alreadyConnected = state === "open";
     const qrcode = extractQr(connectPayload);
+    const status = alreadyConnected ? "online" : qrcode ? "conectando" : "offline";
 
 
     await context.supabase
       .from("channels")
-      .update({ instance_name: instance, status: qrcode ? "conectando" : "erro" })
+      .update({ instance_name: instance, status, last_sync_at: new Date().toISOString() })
       .eq("id", channel.id);
 
     await context.supabase.from("channel_logs").insert({
       channel_id: channel.id,
       tipo: "connect",
-      descricao: qrcode ? "QR Code gerado" : "Falha ao gerar QR Code",
+      descricao: alreadyConnected ? "Instância yesodcrm já estava conectada" : qrcode ? "QR Code gerado" : "Instância sem QR Code disponível",
       user_id: context.userId,
     } as any);
 
-    return { instance, qrcode, pairingCode: connectPayload?.pairingCode ?? null };
+    return {
+      instance,
+      qrcode,
+      status,
+      state,
+      alreadyConnected,
+      pairingCode: connectPayload?.pairingCode ?? null,
+    };
   });
 
 /** Consulta o estado atual da instância e sincroniza o status no banco. */
@@ -180,8 +148,8 @@ export const channelInstanceStatus = createServerFn({ method: "POST" })
     const instance = channel.instance_name || EVOLUTION_INSTANCE;
 
     const payload = await evoFetch(`/instance/connectionState/${instance}`);
-    const state = payload?.instance?.state ?? payload?.state ?? "close";
-    const status = state === "open" ? "online" : state === "connecting" ? "conectando" : "offline";
+    const state = extractState(payload);
+    const status = mapEvolutionState(state);
 
     await context.supabase
       .from("channels")
