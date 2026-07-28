@@ -58,19 +58,27 @@ const AREAS = [
 ];
 
 function AIAssistantPage() {
+  const { role } = Route.useRouteContext() as { role: string };
+  const ensure = useServerFn(ensureAssistants);
   const [mounted, setMounted] = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [assistants, setAssistants] = useState<AssistantRow[]>([]);
+  const [configTarget, setConfigTarget] = useState<AssistantRow | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    ensure({ data: { sectors: AREAS.map((a) => ({ id: a.id, name: a.name })) } })
+      .then((rows: any) => setAssistants(rows ?? []))
+      .catch(() => setAssistants([]));
   }, []);
 
   const selectedAreaData = AREAS.find((a) => a.id === selectedArea);
   const AreaIcon = selectedAreaData?.icon;
+
 
   async function sendMessage() {
     if (!inputValue.trim() || !selectedArea) return;
