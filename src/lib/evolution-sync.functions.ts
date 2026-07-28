@@ -14,5 +14,5 @@ export const syncConversations = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     if (!isAdmin) throw new Error("Apenas administradores podem sincronizar conversas.");
-    return runConversationSync(context.supabase, data.limit);
+    return runConversationSync(data.limit);
   });
