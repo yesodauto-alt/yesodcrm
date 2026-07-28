@@ -13,7 +13,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, KanbanSquare, Settings, User, LogOut, Moon, Sun, Contact, Flame, Radio, MessageSquare, ListChecks, ShieldCheck, FileText, Users2, LifeBuoy, Bot } from "lucide-react";
+import { LayoutDashboard, Users, KanbanSquare, Settings, User, LogOut, Moon, Sun, Contact, Flame, Radio, MessageSquare, ListChecks, ShieldCheck, FileText, Users2, LifeBuoy, Bot, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { GlobalSearch } from "@/components/global-search";
