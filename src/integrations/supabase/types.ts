@@ -989,7 +989,7 @@ export type Database = {
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "member" | "super_admin" | "agente"
+      app_role: "admin" | "member" | "super_admin" | "agente" | "gerente"
       channel_status: "online" | "offline" | "conectando" | "erro"
       channel_type: "evolution" | "meta_cloud"
       history_type:
@@ -1156,7 +1156,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "member", "super_admin", "agente"],
+      app_role: ["admin", "member", "super_admin", "agente", "gerente"],
       channel_status: ["online", "offline", "conectando", "erro"],
       channel_type: ["evolution", "meta_cloud"],
       history_type: [
