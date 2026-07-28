@@ -349,6 +349,18 @@ function AIAssistantPage() {
           </CardContent>
         </Card>
       )}
+
+      <AssistantConfigDialog
+        assistant={configTarget}
+        open={!!configTarget}
+        onOpenChange={(v) => !v && setConfigTarget(null)}
+        canEdit={role === "super_admin"}
+        canEditDocs={role !== "admin"}
+        onSaved={(row) =>
+          setAssistants((prev) => prev.map((a) => (a.id === row.id ? { ...a, ...row } : a)))
+        }
+      />
     </div>
+
   );
 }
