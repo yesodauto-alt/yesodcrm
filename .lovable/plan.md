@@ -1,49 +1,45 @@
-# Diagnóstico (verificado no projeto)
+## Diagnóstico verificado agora (antes do plano)
 
-**1. Evolution API não conecta**
-- A tela de Canais chama `/api/evolution-proxy?...`. Esse arquivo existe em `api/evolution-proxy.ts` no formato Vercel, que **não é servido** por este projeto (TanStack Start). Logo, toda chamada de QR Code retorna 404 / HTML — por isso nada acontece.
-- As credenciais `EVOLUTION_API_URL` e `EVOLUTION_API_KEY` **não estão cadastradas** no backend.
-- A tela de Canais grava campos `nome`, `numero`, `tipo`, `unidades`, `token`, `descricao`, mas a tabela `channels` tem `name`, `whatsapp_number`, `connection_type`, `unit`, `api_token`, `description`. Ou seja, criar/editar canal falha silenciosamente (tabela está vazia hoje).
+**Permissões — causa real do erro no Suporte:** consultei as permissões do banco e **nenhuma das 19 tabelas** (`support_tickets`, `channels`, `leads`, `profiles`, `teams`, etc.) tem concessão de acesso para os papéis da aplicação. As regras RLS existem, mas sem a concessão a API do banco recusa tudo que o navegador pede direto — é o erro do Suporte, Equipes e Templates.
 
-**2. Página de Suporte com erro**
-- A página consulta a tabela `support_tickets`, que **não existe** no banco. Toda a listagem e criação de chamado falha.
+**Evolution — causa real do QR Code não gerar:** testei sua instância agora. A chave está **correta** e o servidor responde (Evolution v2.3.7). O endereço salvo, porém, está **sem `https://`** — o servidor monta a URL e a chamada falha antes de sair. Confirmei também que já existe uma instância chamada `skip` (não `yesodcrm`), então a instância `yesodcrm` precisa ser criada/pareada uma única vez e vinculada ao canal.
 
-**3. Permissões**
-- A hierarquia é lida de `profiles.default_role`, e a política da tabela `profiles` é `ALL ... USING (true)` para qualquer autenticado — ou seja, **qualquer usuário pode editar o próprio papel e virar super admin**. Falha grave.
-- O acesso super admin está *hardcoded* por UUID no código do layout.
-- A tabela correta (`user_roles` + função `has_role`) existe mas **não é usada** para controlar nada.
-- O enum `app_role` tem `admin, member, super_admin, agente`; o menu ainda cita papéis inexistentes (`gerente`, `sdr`, `recepcao`).
+**Papéis:** o banco só reconhece `super_admin`, `admin`, `agente` e `member`. **`gerente` não existe** — vou adicioná-lo ao conjunto de papéis para atender a regra das Bases de Conhecimento (o menu já cita "gerente" sem efeito hoje).
 
 ---
 
-# Plano
+## Etapa 1 — Correções
 
-## Etapa 1 — Permissões e hierarquia (base de tudo)
-Hierarquia definida: **Super Admin** (só você) > **Admin** (cliente/gerente) > **Agente**.
+1. **Migração de permissões**: conceder leitura/escrita ao papel autenticado e acesso total ao papel de serviço em todas as tabelas do schema público. Sem acesso anônimo; a RLS existente continua valendo. Isso destrava Suporte, Equipes, Templates e Perfil.
+2. **Evolution**: normalizar o endereço no servidor (acrescentar `https://` quando faltar, forçar https, remover barra final) e usar **`yesodcrm`** como nome fixo de instância — reaproveitando-a se já existir (consulta à lista de instâncias em vez de depender do texto do erro). Vincular `instance_name = 'yesodcrm'` ao canal.
+3. **Mensagens de erro reais** na tela de Canais (hoje tudo vira erro genérico).
+4. **Webhook**: registrar na instância `yesodcrm` a URL pública do CRM (`/api/public/webhooks/new-message`) para receber mensagens; envio pela função já existente `sendWhatsAppMessage`.
+5. **Validação**: gerar QR, confirmar pareamento, status passando para online, enviar uma mensagem de teste e conferir a chegada de uma mensagem recebida.
 
-- Migração: limpar o enum para `super_admin | admin | agente`; passar a fonte da verdade para `user_roles`.
-- Bloquear escalonamento: `profiles` deixa de permitir edição do papel; `user_roles` só pode ser alterada por super admin (política via `has_role`).
-- Funções `is_super_admin()` / `has_role()` usadas em todas as políticas sensíveis.
-- Regras de acesso:
-  - **Super Admin**: tudo, incluindo Configurações, Canais, Equipes e gestão de usuários/papéis.
-  - **Admin**: opera e gerencia dados do cliente (leads, contatos, tarefas, conversas, equipes, templates, canais em modo leitura/uso), **não** altera papéis nem configurações globais.
-  - **Agente**: leads, contatos, conversas, tarefas, fila SDR, prioridades, perfil e suporte.
-- Layout `_authenticated`: remover o UUID hardcoded, ler papel de `user_roles`, e bloquear rotas por papel (não apenas esconder do menu).
-- Nova tela **Usuários** (só super admin) para atribuir papéis.
+## Etapa 2 — Configuração dos Assistentes de IA
 
-## Etapa 2 — Suporte
-- Migração criando `support_tickets` (assunto, descrição, status, prioridade, criado por, atribuído a, equipe) + comentários do chamado, com GRANTs e RLS: cada usuário vê os próprios chamados; admin/super admin veem e gerenciam todos.
-- Ajustar a página `/support` para tratar erro de forma visível em vez de tela vazia.
+- Nova tabela `ai_assistants` (setor, nome, status, modelo, temperatura, prompt do sistema, webhook, workflow, timeout) e `ai_assistant_audit` (histórico de alterações, com autor e data, preenchido por gatilho).
+- Setores atuais da tela permanecem; ao abrir, cada setor carrega/gera sua linha de configuração.
+- Botão **Configurar** renderizado **apenas para super_admin** (e as regras de escrita no banco também restritas a super_admin — não só escondido na interface).
+- Aba de histórico dentro do painel de configuração.
 
-## Etapa 3 — Evolution API (conexão real)
-- Solicitar com segurança `EVOLUTION_API_URL` e `EVOLUTION_API_KEY`.
-- Criar rota de servidor real em `src/routes/api/evolution/...` (substituindo o arquivo Vercel morto) com ações: criar instância, conectar/QR, status, logout, enviar mensagem — protegida por autenticação e limitada a admin/super admin.
-- Corrigir o mapeamento de colunas da tabela `channels` em `channels.functions.ts` e na tela `/channels` (nome↔name, numero↔whatsapp_number, tipo↔connection_type, token↔api_token, descricao↔description, unidade).
-- Salvar `instance_name` por canal, exibir QR Code, fazer polling de status e gravar em `channel_logs`.
-- Registrar o webhook da instância apontando para os endpoints públicos já existentes (`/api/public/webhooks/...`) para receber mensagens via n8n/Evolution.
-- Botão "Testar conexão" passando a chamar a Evolution de verdade.
+## Etapa 3 — Bases de Conhecimento
+
+- Tabelas `ai_knowledge_bases` (uma por assistente, com `team_id`) e `ai_knowledge_documents` (título, conteúdo/arquivo, criado por).
+- Somente adicionar, atualizar e remover documentos — sem processamento de IA nesta sprint.
+- Regras de acesso via `team_members` já existente: super_admin tudo; admin lê todas sem alterar configuração; gerente só a base da sua equipe; agente só a do seu setor. Inclui adicionar `gerente` ao conjunto de papéis.
+- Arquivos, se houver upload, vão para um bucket privado com políticas por equipe.
+
+## Etapa 4 — Automações Internas
+
+- Tabelas `automations` (nome, descrição, status, gatilho, condições em JSON, ações em JSON) e `automation_logs`.
+- Nova rota `/automations` no menu, visível e gravável apenas para super_admin e admin.
+- Construtor de condições que lê os **campos reais** das tabelas do CRM (leads, contatos, tarefas) — sem listas fixas.
+- Ações: operações internas (atualizar status/temperatura/responsável, criar tarefa, registrar histórico) e disparo de webhook para o n8n.
+- Execução por gatilho no banco chamando um endpoint público do CRM, que registra tudo em `automation_logs`. A inteligência permanece no n8n.
 
 ## Detalhes técnicos
-- Chamadas à Evolution ficam sempre no servidor (chave nunca vai ao navegador).
-- Remover `api/evolution-proxy.ts` (código morto de outra plataforma).
-- Sem mudanças de identidade visual; apenas correções e as duas telas novas (Usuários e ajustes de Suporte).
+
+- Migrações separadas por etapa, sempre com GRANT + RLS + políticas por papel.
+- Nenhuma mudança de layout, arquitetura ou módulos existentes; apenas novas telas/abas e correções.
+- O envio real de mensagens e o QR usam as funções de servidor já existentes em `src/lib/evolution.functions.ts`, com a chave sempre no servidor.
