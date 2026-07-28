@@ -60,26 +60,36 @@ function ChannelsPage() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("");
+  const [showQrDialog, setShowQrDialog] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    fetchChannels();
+    fetchChannels(true);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
 
-  async function fetchChannels() {
+  async function fetchChannels(syncStatus = false) {
     setLoading(true);
     const { data, error } = await supabase
       .from("channels")
       .select("*")
       .order("created_at", { ascending: false });
     if (error) toast.error("Erro ao carregar canais");
-    setChannels((data ?? []) as unknown as Channel[]);
+    const loaded = (data ?? []) as unknown as Channel[];
+    setChannels(loaded);
     setLoading(false);
+    if (syncStatus && loaded.length > 0) {
+      await Promise.allSettled(loaded.map((channel) => statusFn({ data: { channelId: channel.id } })));
+      const { data: refreshed } = await supabase
+        .from("channels")
+        .select("*")
+        .order("created_at", { ascending: false });
+      setChannels((refreshed ?? loaded) as unknown as Channel[]);
+    }
   }
 
   function stopPolling() {
@@ -90,12 +100,20 @@ function ChannelsPage() {
   async function generateQR(channel: Channel) {
     setQrLoading(true);
     setQrCode(null);
-    setConnectionStatus("Criando instância na Evolution API...");
+    setShowQrDialog(true);
+    setConnectionStatus("Consultando a instância yesodcrm...");
     try {
       const res = await connectFn({ data: { channelId: channel.id } });
+      if (res.alreadyConnected) {
+        toast.success("A instância yesodcrm já está conectada");
+        setConnectionStatus("WhatsApp já conectado à instância yesodcrm.");
+        setQrCode(null);
+        fetchChannels();
+        return;
+      }
       if (!res.qrcode) {
-        toast.error("A Evolution API não retornou o QR Code.");
-        setConnectionStatus("");
+        toast.error("A instância não retornou QR Code. Desconecte e tente gerar novamente.");
+        setConnectionStatus("Sem QR Code disponível para a instância yesodcrm.");
         return;
       }
       setQrCode(res.qrcode);
@@ -104,6 +122,7 @@ function ChannelsPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao gerar QR Code");
       setConnectionStatus("");
+      setShowQrDialog(false);
     } finally {
       setQrLoading(false);
     }
@@ -183,7 +202,7 @@ function ChannelsPage() {
         )}
       </div>
 
-      {(qrCode || qrLoading) && (
+      {showQrDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <Card className="max-w-sm w-full">
             <CardContent className="p-8">
@@ -193,7 +212,7 @@ function ChannelsPage() {
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
                   <p className="text-sm text-muted-foreground">{connectionStatus}</p>
                 </div>
-              ) : (
+              ) : qrCode ? (
                 <>
                   <div className="flex justify-center mb-4">
                     <img src={qrCode!} alt="QR Code de pareamento do WhatsApp" className="w-64 h-64" />
@@ -209,11 +228,27 @@ function ChannelsPage() {
                       stopPolling();
                       setQrCode(null);
                       setConnectionStatus("");
+                      setShowQrDialog(false);
                     }}
                   >
                     Fechar
                   </Button>
                 </>
+              ) : (
+                <div className="flex flex-col items-center gap-4 py-6">
+                  <CheckCircle2 className="h-12 w-12 text-green-600" />
+                  <p className="text-sm text-center text-muted-foreground">{connectionStatus}</p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setConnectionStatus("");
+                      setShowQrDialog(false);
+                    }}
+                  >
+                    Fechar
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
