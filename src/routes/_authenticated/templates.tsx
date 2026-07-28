@@ -56,7 +56,7 @@ function TemplatesPage() {
     let query = supabase.from("templates").select("*").order("category").order("title");
     if (filterCat !== "all") query = query.eq("category", filterCat);
     const { data } = await query;
-    setTemplates(data || []);
+    setTemplates((data ?? []) as unknown as Template[]);
     setLoading(false);
   }
 

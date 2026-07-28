@@ -41,7 +41,7 @@ export const Route = createFileRoute("/api/public/webhooks/channel-status")({
           const { data: found } = await supabaseAdmin
             .from("channels")
             .select("id")
-            .eq("numero", parsed.data.numero)
+            .eq("whatsapp_number", parsed.data.numero)
             .maybeSingle();
           channelId = found?.id;
         }

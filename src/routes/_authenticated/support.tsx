@@ -115,7 +115,7 @@ function SupportPage() {
         return;
       }
 
-      setTickets(data || []);
+      setTickets((data ?? []) as unknown as SupportTicket[]);
 
       // Busca os perfis dos usuários criadores e atribuídos
       const userIds = new Set<string>();
