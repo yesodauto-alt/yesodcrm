@@ -377,8 +377,6 @@ function ChannelModal({
     units: channel?.units?.join(", ") || "",
     responsible: channel?.responsible || "",
     active: channel?.active ?? true,
-    webhook_url: channel?.webhook_url || "",
-    api_token: channel?.api_token || "",
     description: channel?.description || "",
   });
   const [saving, setSaving] = useState(false);
@@ -396,8 +394,7 @@ function ChannelModal({
       units: form.units ? form.units.split(",").map((u) => u.trim()).filter(Boolean) : [],
       responsible: form.responsible || null,
       active: form.active,
-      webhook_url: form.webhook_url || null,
-      api_token: form.api_token || null,
+      instance_name: "yesodcrm",
       description: form.description || null,
     };
 
@@ -467,23 +464,6 @@ function ChannelModal({
               className={field}
               value={form.responsible}
               onChange={(e) => setForm({ ...form, responsible: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Webhook URL (n8n)</label>
-            <input
-              className={field}
-              value={form.webhook_url}
-              onChange={(e) => setForm({ ...form, webhook_url: e.target.value })}
-              placeholder="https://..."
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Token / API Key</label>
-            <input
-              className={field}
-              value={form.api_token}
-              onChange={(e) => setForm({ ...form, api_token: e.target.value })}
             />
           </div>
           <div>
