@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,8 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot, Send, Loader2, Zap, Users, Phone, BarChart3, Headphones } from "lucide-react";
+import { Bot, Send, Loader2, Zap, Users, Phone, BarChart3, Headphones, Settings2 } from "lucide-react";
 import { toast } from "sonner";
+import { ensureAssistants } from "@/lib/ai-config.functions";
+import { AssistantConfigDialog, type AssistantRow } from "@/components/ai/AssistantConfigDialog";
+
 
 export const Route = createFileRoute("/_authenticated/ai-assistant")({
   head: () => ({ meta: [{ title: "IA Assistente — Yesod CRM" }] }),
