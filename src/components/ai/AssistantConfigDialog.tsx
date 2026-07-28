@@ -24,6 +24,7 @@ import {
   getKnowledgeBase,
   upsertKnowledgeDocument,
   deleteKnowledgeDocument,
+  getKnowledgeFileUrl,
 } from "@/lib/ai-config.functions";
 
 const MODELS = [
