@@ -334,7 +334,7 @@ function ChannelsPage() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-3">
-                  Tipo: {channel.connection_type === "meta_cloud" ? "Meta Cloud" : "Evolution API"}
+                  Tipo: Evolution API
                   {channel.instance_name ? ` · Instância: ${channel.instance_name}` : ""}
                 </p>
               </CardContent>
