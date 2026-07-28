@@ -32,6 +32,7 @@ function ConversationsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const list = useServerFn(listAllConversations);
+  const sync = useServerFn(syncConversations);
   const { data, refetch } = useQuery({
     queryKey: ["conversations-all", { search, status }],
     queryFn: () => list({ data: { search, status } }),
@@ -42,7 +43,7 @@ function ConversationsPage() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await syncConversations(50);
+      const res = await sync({ data: { limit: 50 } });
       setSyncResult(`${res.conversations} conversas, ${res.messages} mensagens importadas`);
       refetch();
     } catch (err: any) {
