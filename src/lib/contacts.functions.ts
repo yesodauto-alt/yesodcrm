@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { buildSearchFilter } from "@/lib/search-filter";
 
 const contactInputSchema = z.object({
   nome: z.string().min(1),
@@ -42,10 +43,8 @@ export const listContacts = createServerFn({ method: "POST" })
       .order(sort, { ascending })
       .range(from, to);
     if (data.search) {
-      const s = `%${data.search}%`;
-      query = query.or(
-        `nome.ilike.${s},empresa.ilike.${s},email.ilike.${s},telefone.ilike.${s},whatsapp.ilike.${s}`,
-      );
+      const filter = buildSearchFilter(data.search);
+      if (filter) query = query.or(filter);
     }
     const { data: rows, count, error } = await query;
     if (error) throw new Error(error.message);
