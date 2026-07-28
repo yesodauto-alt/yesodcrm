@@ -1,5 +1,15 @@
 import { EVOLUTION_INSTANCE } from "@/lib/evolution-shared";
 
+export type SyncResult = {
+  contatosEncontrados: number;
+  contatosCriados: number;
+  leadsCriados: number;
+  conversasImportadas: number;
+  conversasAtualizadas: number;
+  mensagensSincronizadas: number;
+  erros: string[];
+};
+
 function normalizeBaseUrl(raw: string) {
   let url = raw.trim().replace(/\/+$/, "");
   if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
@@ -32,12 +42,22 @@ function asArray(payload: any): any[] {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.records)) return payload.records;
   if (Array.isArray(payload?.messages?.records)) return payload.messages.records;
+  if (Array.isArray(payload?.chats?.records)) return payload.chats.records;
+  if (Array.isArray(payload?.contacts?.records)) return payload.contacts.records;
   if (Array.isArray(payload?.data)) return payload.data;
   return [];
 }
 
 function onlyDigits(value: string) {
   return (value ?? "").replace(/\D/g, "");
+}
+
+function jidOf(row: any): string | null {
+  return row?.remoteJid ?? row?.id ?? row?.jid ?? row?.key?.remoteJid ?? null;
+}
+
+function isPersonJid(jid: string | null): jid is string {
+  return !!jid && jid.includes("@") && !jid.includes("@g.us") && !jid.includes("broadcast") && !jid.includes("status@");
 }
 
 function msgTimestamp(msg: any): string {
@@ -59,127 +79,218 @@ function msgContent(msg: any): string {
     m.documentMessage?.caption ??
     (m.audioMessage ? "[áudio]" : null) ??
     (m.imageMessage ? "[imagem]" : null) ??
+    (m.videoMessage ? "[vídeo]" : null) ??
     (m.documentMessage ? "[documento]" : null) ??
+    (m.stickerMessage ? "[figurinha]" : null) ??
+    (m.locationMessage ? "[localização]" : null) ??
     ""
   );
 }
 
-/** Importa chats e mensagens da instância Evolution para o CRM. */
-export async function runConversationSync(supabase: any, limit: number) {
-  const { data: channel, error: chErr } = await supabase
+/**
+ * Importa contatos, chats e mensagens da instância Evolution para o CRM.
+ * Idempotente: reexecutar não duplica contatos, leads, conversas nem mensagens.
+ */
+export async function runConversationSync(limit: number): Promise<SyncResult> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const db = supabaseAdmin as any;
+  const result: SyncResult = {
+    contatosEncontrados: 0,
+    contatosCriados: 0,
+    leadsCriados: 0,
+    conversasImportadas: 0,
+    conversasAtualizadas: 0,
+    mensagensSincronizadas: 0,
+    erros: [],
+  };
+
+  // canal ativo da instância fixa
+  const { data: channel, error: chErr } = await db
     .from("channels")
-    .select("id")
+    .select("id, units, unit")
     .eq("instance_name", EVOLUTION_INSTANCE)
-    .order("created_at", { ascending: true })
+    .eq("active", true)
+    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (chErr) throw new Error(chErr.message);
-  if (!channel) throw new Error("Nenhum canal cadastrado para a instância Evolution.");
+  if (!channel) throw new Error(`Nenhum canal ativo para a instância ${EVOLUTION_INSTANCE}.`);
+  const unidade: string | null = channel.units?.[0] ?? channel.unit ?? null;
+
+  // nomes vindos da agenda da Evolution
+  const nameByNumber = new Map<string, string>();
+  try {
+    const contacts = asArray(await evoPost(`/chat/findContacts/${EVOLUTION_INSTANCE}`, {}));
+    for (const c of contacts) {
+      const jid = jidOf(c);
+      if (!isPersonJid(jid)) continue;
+      const numero = onlyDigits(jid.split("@")[0]);
+      const nome = c?.pushName ?? c?.name ?? c?.notify ?? null;
+      if (numero && nome) nameByNumber.set(numero, nome);
+    }
+  } catch (e: any) {
+    result.erros.push(`Contatos da Evolution: ${e.message}`);
+  }
 
   const chats = asArray(await evoPost(`/chat/findChats/${EVOLUTION_INSTANCE}`, {}));
-  let conversations = 0;
-  let messagesCount = 0;
 
   for (const chat of chats.slice(0, limit)) {
-    const jid: string | undefined =
-      chat?.remoteJid ?? chat?.id ?? chat?.jid ?? chat?.key?.remoteJid;
-    if (!jid || jid.includes("@g.us") || jid.includes("broadcast")) continue;
+    const jid = jidOf(chat);
+    if (!isPersonJid(jid)) continue;
     const numero = onlyDigits(jid.split("@")[0]);
     if (!numero) continue;
+    result.contatosEncontrados += 1;
 
-    const lead = await getOrCreateLead(supabase, numero, chat?.pushName ?? chat?.name);
-    if (!lead) continue;
+    try {
+      const nome =
+        chat?.pushName ?? chat?.name ?? nameByNumber.get(numero) ?? `WhatsApp ${numero.slice(-4)}`;
 
-    const rawMessages = asArray(
-      await evoPost(`/chat/findMessages/${EVOLUTION_INSTANCE}`, {
-        where: { key: { remoteJid: jid } },
-        limit: 50,
-      }),
-    );
-    const sorted = rawMessages
-      .map((m: any) => ({
-        external_id: m?.key?.id ?? m?.id ?? null,
-        direction: m?.key?.fromMe ? "out" : "in",
-        content: msgContent(m),
-        sender: m?.pushName ?? null,
-        sent_at: msgTimestamp(m),
-      }))
-      .filter((m) => m.external_id && m.content)
-      .sort((a, b) => a.sent_at.localeCompare(b.sent_at));
+      const contact = await getOrCreateContact(db, numero, nome, unidade, result);
+      const lead = await getOrCreateLead(db, numero, nome, unidade, channel.id, result);
 
-    const lastAt = sorted.length ? sorted[sorted.length - 1].sent_at : null;
+      const rawMessages = asArray(
+        await evoPost(`/chat/findMessages/${EVOLUTION_INSTANCE}`, {
+          where: { key: { remoteJid: jid } },
+          limit: 100,
+        }),
+      );
+      const sorted = rawMessages
+        .map((m: any) => ({
+          external_id: m?.key?.id ?? m?.id ?? null,
+          direction: m?.key?.fromMe ? "out" : "in",
+          content: msgContent(m),
+          sender: m?.pushName ?? null,
+          sent_at: msgTimestamp(m),
+        }))
+        .filter((m) => m.external_id && m.content)
+        .sort((a, b) => a.sent_at.localeCompare(b.sent_at));
 
-    const { data: existing } = await supabase
-      .from("lead_conversations")
-      .select("id")
-      .eq("external_id", jid)
-      .maybeSingle();
+      const lastAt = sorted.length ? sorted[sorted.length - 1].sent_at : null;
 
-    let conversationId: string | null = existing?.id ?? null;
-    if (conversationId) {
-      await supabase
+      const { data: existing } = await db
         .from("lead_conversations")
-        .update({ numero, channel_id: channel.id, last_message_at: lastAt })
-        .eq("id", conversationId);
-    } else {
-      const { data: inserted, error: insErr } = await supabase
-        .from("lead_conversations")
-        .insert({
-          lead_id: lead.id,
-          channel_id: channel.id,
-          external_id: jid,
-          numero,
-          status: "open",
-          source: "evolution",
-          occurred_at: lastAt ?? new Date().toISOString(),
-          last_message_at: lastAt,
-        })
         .select("id")
-        .single();
-      if (insErr) throw new Error(insErr.message);
-      conversationId = inserted.id;
-    }
-    conversations += 1;
+        .eq("external_id", jid)
+        .maybeSingle();
 
-    const { data: known } = await supabase
-      .from("lead_messages")
-      .select("external_id")
-      .eq("conversation_id", conversationId);
-    const knownIds = new Set((known ?? []).map((k: any) => k.external_id));
+      let conversationId: string | null = existing?.id ?? null;
+      if (conversationId) {
+        await db
+          .from("lead_conversations")
+          .update({
+            numero,
+            channel_id: channel.id,
+            lead_id: lead?.id ?? null,
+            contact_id: contact?.id ?? null,
+            unidade,
+            last_message_at: lastAt,
+          })
+          .eq("id", conversationId);
+        result.conversasAtualizadas += 1;
+      } else {
+        const { data: inserted, error: insErr } = await db
+          .from("lead_conversations")
+          .insert({
+            lead_id: lead?.id ?? null,
+            contact_id: contact?.id ?? null,
+            channel_id: channel.id,
+            external_id: jid,
+            numero,
+            unidade,
+            status: "open",
+            source: "evolution",
+            occurred_at: lastAt ?? new Date().toISOString(),
+            last_message_at: lastAt,
+          })
+          .select("id")
+          .single();
+        if (insErr) throw new Error(insErr.message);
+        conversationId = inserted.id;
+        result.conversasImportadas += 1;
+      }
 
-    const toInsert = sorted
-      .filter((m) => !knownIds.has(m.external_id))
-      .map((m) => ({ ...m, conversation_id: conversationId, lead_id: lead.id }));
+      const { data: known } = await db
+        .from("lead_messages")
+        .select("external_id")
+        .eq("conversation_id", conversationId);
+      const knownIds = new Set((known ?? []).map((k: any) => k.external_id));
 
-    if (toInsert.length) {
-      const { error: mErr } = await supabase.from("lead_messages").insert(toInsert);
-      if (mErr) throw new Error(mErr.message);
-      messagesCount += toInsert.length;
+      const toInsert = sorted
+        .filter((m) => !knownIds.has(m.external_id))
+        .map((m) => ({ ...m, conversation_id: conversationId, lead_id: lead?.id ?? null }));
+
+      if (toInsert.length) {
+        const { error: mErr } = await db
+          .from("lead_messages")
+          .upsert(toInsert, { onConflict: "external_id", ignoreDuplicates: true });
+        if (mErr) throw new Error(mErr.message);
+        result.mensagensSincronizadas += toInsert.length;
+      }
+    } catch (e: any) {
+      result.erros.push(`${numero}: ${e?.message ?? "erro desconhecido"}`);
     }
   }
 
-  return { conversations, messages: messagesCount };
+  return result;
 }
 
-async function getOrCreateLead(supabase: any, numero: string, pushName?: string | null) {
-  const { data: found } = await supabase
-    .from("leads")
+async function getOrCreateContact(
+  db: any,
+  numero: string,
+  nome: string,
+  unidade: string | null,
+  result: SyncResult,
+) {
+  const { data: found } = await db
+    .from("contacts")
     .select("id")
-    .or(`whatsapp.eq.${numero},telefone.eq.${numero}`)
-    .limit(1)
+    .eq("whatsapp", numero)
     .maybeSingle();
   if (found) return found;
-  const { data: created, error } = await supabase
+  const { data: created, error } = await db
+    .from("contacts")
+    .insert({ nome, whatsapp: numero, telefone: numero, origem: "WhatsApp", unidade })
+    .select("id")
+    .single();
+  if (error) {
+    result.erros.push(`Contato ${numero}: ${error.message}`);
+    return null;
+  }
+  result.contatosCriados += 1;
+  return created;
+}
+
+async function getOrCreateLead(
+  db: any,
+  numero: string,
+  nome: string,
+  unidade: string | null,
+  channelId: string,
+  result: SyncResult,
+) {
+  const { data: found } = await db
+    .from("leads")
+    .select("id")
+    .eq("whatsapp", numero)
+    .maybeSingle();
+  if (found) return found;
+  const { data: created, error } = await db
     .from("leads")
     .insert({
-      nome: pushName || `WhatsApp ${numero.slice(-4)}`,
+      nome,
       whatsapp: numero,
       telefone: numero,
       status: "novo",
       origem: "WhatsApp",
+      unidade,
+      channel_id: channelId,
     })
     .select("id")
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    result.erros.push(`Lead ${numero}: ${error.message}`);
+    return null;
+  }
+  result.leadsCriados += 1;
   return created;
 }
