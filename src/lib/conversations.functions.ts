@@ -35,9 +35,11 @@ export const listAllConversations = createServerFn({ method: "POST" })
         (r: any) =>
           r.numero?.toLowerCase().includes(s) ||
           r.resumo_ai?.toLowerCase().includes(s) ||
+          r.contacts?.nome?.toLowerCase().includes(s) ||
           r.leads?.nome?.toLowerCase().includes(s),
       );
     }
+
     return out;
   });
 
