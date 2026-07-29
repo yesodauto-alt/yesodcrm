@@ -38,24 +38,30 @@ export const sendInvite = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const email = data.email.toLowerCase();
 
-    const { data: invite, error } = await context.supabase
+    const payload = {
+      email,
+      full_name: data.full_name || null,
+      role: data.role,
+      team_id: data.team_id ?? null,
+      status: "pending",
+      invited_by: context.userId,
+      last_sent_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
+    };
+
+    const { data: existing } = await context.supabase
       .from("user_invites")
-      .upsert(
-        {
-          email,
-          full_name: data.full_name || null,
-          role: data.role,
-          team_id: data.team_id ?? null,
-          status: "pending",
-          invited_by: context.userId,
-          last_sent_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
-        },
-        { onConflict: "email" },
-      )
-      .select("*")
-      .single();
+      .select("id")
+      .eq("email", email)
+      .eq("status", "pending")
+      .maybeSingle();
+
+    const query = existing
+      ? context.supabase.from("user_invites").update(payload).eq("id", existing.id)
+      : context.supabase.from("user_invites").insert(payload);
+    const { data: invite, error } = await query.select("*").single();
     if (error) throw new Error(error.message);
+
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: mailErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
