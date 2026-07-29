@@ -247,7 +247,7 @@ function LeadsPage() {
       <LeadDrawer
         id={openId ?? null}
         open={!!openId}
-        onOpenChange={(o) => { if (!o) nav({ search: {} }); }}
+        onOpenChange={(o) => { if (!o) nav({ search: (prev: any) => ({ ...prev, open: undefined }) }); }}
       />
     </div>
   );
