@@ -286,7 +286,11 @@ function TeamsPage() {
                       <p className="text-sm text-muted-foreground">{currentTeam?.description || "Time de atendimento Yesod."}</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => setShowMemberForm(true)} className="gap-2 border-primary/20 hover:bg-primary/5"><Plus className="h-4 w-4" />Adicionar Agente</Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setShowInviteForm(true)} className="gap-2 border-primary/20 hover:bg-primary/5"><Mail className="h-4 w-4" />Convidar por e-mail</Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowMemberForm(true)} className="gap-2 border-primary/20 hover:bg-primary/5"><Plus className="h-4 w-4" />Adicionar Agente</Button>
+                  </div>
+
                 </CardHeader>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
