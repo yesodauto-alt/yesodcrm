@@ -279,7 +279,10 @@ export const confirmAiTemperatura = createServerFn({ method: "POST" })
 
 export const sdrQueue = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { search?: string; bucket?: string } | undefined) => data ?? {})
+  .inputValidator(
+    (data: { search?: string; bucket?: string; sort?: string; dir?: "asc" | "desc" } | undefined) =>
+      data ?? {},
+  )
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("leads")
@@ -313,10 +316,28 @@ export const sdrQueue = createServerFn({ method: "POST" })
       else { bucket = "outros"; priority = 6; }
       return { ...l, _bucket: bucket, _priority: priority };
     });
-    scored.sort((a: any, b: any) => a._priority - b._priority || new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    const sort = data.sort ?? "prioridade";
+    const asc = (data.dir ?? "desc") === "asc";
+    const interacaoDe = (l: any) =>
+      new Date(l.ultima_interacao_em ?? l.updated_at ?? l.created_at).getTime();
+
+    if (sort === "ultima_interacao") {
+      scored.sort((a: any, b: any) => (asc ? interacaoDe(a) - interacaoDe(b) : interacaoDe(b) - interacaoDe(a)));
+    } else {
+      scored.sort(
+        (a: any, b: any) =>
+          a._priority - b._priority ||
+          (asc
+            ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      );
+    }
+
     const filtered = data.bucket && data.bucket !== "all" ? scored.filter((l: any) => l._bucket === data.bucket) : scored;
     return { rows: filtered };
   });
+
 
 export const sdrStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
