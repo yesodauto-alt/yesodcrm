@@ -245,22 +245,61 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
   return result;
 }
 
-async function getOrCreateContact(
+/** Busca a foto de perfil do contato na Evolution (silencioso em caso de falha). */
+async function fetchProfilePicture(jid: string): Promise<string | null> {
+  try {
+    const res = await evoPost(`/chat/fetchProfilePictureUrl/${EVOLUTION_INSTANCE}`, {
+      number: jid,
+    });
+    return res?.profilePictureUrl ?? res?.url ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Nome automático usado quando a Evolution não devolve o nome real. */
+function fallbackName(numero: string) {
+  return `WhatsApp ${numero.slice(-4)}`;
+}
+
+function isPlaceholder(nome?: string | null) {
+  return !nome || /^WhatsApp \d{4}$/.test(nome.trim()) || /^\d+$/.test(nome.trim());
+}
+
+async function upsertContact(
   db: any,
   numero: string,
-  nome: string,
+  nomeReal: string | null,
+  avatar: string | null,
   unidade: string | null,
   result: SyncResult,
 ) {
   const { data: found } = await db
     .from("contacts")
-    .select("id")
+    .select("id, nome, avatar_url")
     .eq("whatsapp", numero)
     .maybeSingle();
-  if (found) return found;
+
+  if (found) {
+    const patch: Record<string, unknown> = {};
+    if (nomeReal && (isPlaceholder(found.nome) || found.nome !== nomeReal)) patch.nome = nomeReal;
+    if (avatar && avatar !== found.avatar_url) patch.avatar_url = avatar;
+    if (Object.keys(patch).length) {
+      await db.from("contacts").update(patch).eq("id", found.id);
+    }
+    return found;
+  }
+
   const { data: created, error } = await db
     .from("contacts")
-    .insert({ nome, whatsapp: numero, telefone: numero, origem: "WhatsApp", unidade })
+    .insert({
+      nome: nomeReal ?? fallbackName(numero),
+      whatsapp: numero,
+      telefone: numero,
+      origem: "WhatsApp",
+      unidade,
+      avatar_url: avatar,
+    })
     .select("id")
     .single();
   if (error) {
@@ -271,30 +310,42 @@ async function getOrCreateContact(
   return created;
 }
 
-async function getOrCreateLead(
+async function upsertLead(
   db: any,
   numero: string,
-  nome: string,
+  nomeReal: string | null,
+  avatar: string | null,
   unidade: string | null,
   channelId: string,
   result: SyncResult,
 ) {
   const { data: found } = await db
     .from("leads")
-    .select("id")
+    .select("id, nome, avatar_url")
     .eq("whatsapp", numero)
     .maybeSingle();
-  if (found) return found;
+
+  if (found) {
+    const patch: Record<string, unknown> = {};
+    if (nomeReal && isPlaceholder(found.nome)) patch.nome = nomeReal;
+    if (avatar && avatar !== found.avatar_url) patch.avatar_url = avatar;
+    if (Object.keys(patch).length) {
+      await db.from("leads").update(patch).eq("id", found.id);
+    }
+    return found;
+  }
+
   const { data: created, error } = await db
     .from("leads")
     .insert({
-      nome,
+      nome: nomeReal ?? fallbackName(numero),
       whatsapp: numero,
       telefone: numero,
       status: "novo",
       origem: "WhatsApp",
       unidade,
       channel_id: channelId,
+      avatar_url: avatar,
     })
     .select("id")
     .single();
@@ -305,3 +356,4 @@ async function getOrCreateLead(
   result.leadsCriados += 1;
   return created;
 }
+
