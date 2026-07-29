@@ -59,7 +59,7 @@ function Dashboard() {
             <SdrKpi icon={<Clock className="h-4 w-4 text-amber-500" />} label="Follow-ups Pendentes" value={sstats?.followUps ?? 0} search={{ follow_up: "pending" }} />
             <SdrKpi icon={<CalendarClock className="h-4 w-4 text-emerald-500" />} label="Aulas Experimentais" value={sstats?.aulasHoje ?? 0} search={{ aula: "today" }} />
             <SdrKpi icon={<MessageCircleQuestion className="h-4 w-4 text-purple-500" />} label="Sem resposta" value={sstats?.semResposta ?? 0} search={{ aguardando: "true" }} />
-            <SdrKpi icon={<ListTodo className="h-4 w-4 text-cyan-500" />} label="Tarefas Pendentes" value={sstats?.tarefasPendentes ?? 0} search={{ tarefas: "pendente" }} />
+            <SdrKpi icon={<ListTodo className="h-4 w-4 text-cyan-500" />} label="Tarefas Pendentes" value={sstats?.tarefasPendentes ?? 0} to="/priorities" />
           </div>
         </CardContent>
       </Card>
