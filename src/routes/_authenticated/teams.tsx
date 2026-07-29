@@ -187,7 +187,7 @@ function TeamsPage() {
         data: {
           email: inviteForm.email.trim(),
           full_name: inviteForm.full_name.trim() || undefined,
-          role: inviteForm.role,
+          role: inviteForm.role as any,
           team_id: selectedTeam ?? undefined,
           redirect_to: `${window.location.origin}/auth`,
         },
