@@ -20,12 +20,26 @@ import { LEAD_STATUSES, STATUS_COLORS, STATUS_LABELS } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LeadForm } from "@/components/leads/lead-form";
 import { LeadDrawer } from "@/components/leads/lead-drawer";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const searchSchema = z.object({ open: z.string().optional() });
+const searchSchema = z.object({
+  open: z.string().optional(),
+  status: z.string().optional(),
+  temperatura: z.string().optional(),
+  unidade: z.string().optional(),
+  origem: z.string().optional(),
+  responsavel: z.string().optional(),
+  interesse: z.string().optional(),
+  objetivo: z.string().optional(),
+  tag: z.string().optional(),
+  aguardando: z.string().optional(),
+  aula: z.string().optional(),
+  follow_up: z.string().optional(),
+});
+
 
 export const Route = createFileRoute("/_authenticated/leads")({
   head: () => ({ meta: [{ title: "Leads — Yesod CRM" }] }),
