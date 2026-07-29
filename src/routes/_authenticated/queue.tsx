@@ -21,7 +21,9 @@ import {
   TEMPERATURA_COLORS,
   TEMPERATURA_LABELS,
 } from "@/lib/types";
-import { Search, Flame, CalendarClock, Clock, Sparkles, MessageCircleQuestion } from "lucide-react";
+import { Search, Flame, CalendarClock, Clock, Sparkles, MessageCircleQuestion, ArrowUpDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LeadDrawer } from "@/components/leads/lead-drawer";
