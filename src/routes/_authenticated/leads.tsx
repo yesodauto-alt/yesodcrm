@@ -211,7 +211,7 @@ function LeadsPage() {
                 <TableRow
                   key={l.id}
                   className="cursor-pointer"
-                  onClick={() => nav({ search: { open: l.id } })}
+                  onClick={() => nav({ search: (prev: any) => ({ ...prev, open: l.id }) })}
                 >
                   <TableCell className="font-medium">{l.nome}</TableCell>
                   <TableCell>{l.empresa ?? "—"}</TableCell>
