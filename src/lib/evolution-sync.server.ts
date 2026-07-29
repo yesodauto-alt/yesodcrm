@@ -117,16 +117,20 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
   if (!channel) throw new Error(`Nenhum canal ativo para a instância ${EVOLUTION_INSTANCE}.`);
   const unidade: string | null = channel.units?.[0] ?? channel.unit ?? null;
 
-  // nomes vindos da agenda da Evolution
+  // nomes e fotos vindos da agenda da Evolution
   const nameByNumber = new Map<string, string>();
+  const picByNumber = new Map<string, string>();
   try {
     const contacts = asArray(await evoPost(`/chat/findContacts/${EVOLUTION_INSTANCE}`, {}));
     for (const c of contacts) {
       const jid = jidOf(c);
       if (!isPersonJid(jid)) continue;
       const numero = onlyDigits(jid.split("@")[0]);
-      const nome = c?.pushName ?? c?.name ?? c?.notify ?? null;
-      if (numero && nome) nameByNumber.set(numero, nome);
+      if (!numero) continue;
+      const nome = c?.pushName ?? c?.name ?? c?.notify ?? c?.verifiedName ?? null;
+      if (nome) nameByNumber.set(numero, nome);
+      const pic = c?.profilePicUrl ?? c?.profilePictureUrl ?? c?.picture ?? null;
+      if (pic) picByNumber.set(numero, pic);
     }
   } catch (e: any) {
     result.erros.push(`Contatos da Evolution: ${e.message}`);
@@ -142,11 +146,18 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
     result.contatosEncontrados += 1;
 
     try {
-      const nome =
-        chat?.pushName ?? chat?.name ?? nameByNumber.get(numero) ?? `WhatsApp ${numero.slice(-4)}`;
+      const nomeReal =
+        chat?.pushName ?? chat?.name ?? chat?.verifiedName ?? nameByNumber.get(numero) ?? null;
+      const nome = nomeReal ?? `WhatsApp ${numero.slice(-4)}`;
+      const avatar =
+        chat?.profilePicUrl ??
+        chat?.profilePictureUrl ??
+        picByNumber.get(numero) ??
+        (await fetchProfilePicture(jid));
 
-      const contact = await getOrCreateContact(db, numero, nome, unidade, result);
-      const lead = await getOrCreateLead(db, numero, nome, unidade, channel.id, result);
+      const contact = await upsertContact(db, numero, nomeReal, avatar, unidade, result);
+      const lead = await upsertLead(db, numero, nomeReal, avatar, unidade, channel.id, result);
+
 
       const rawMessages = asArray(
         await evoPost(`/chat/findMessages/${EVOLUTION_INSTANCE}`, {
