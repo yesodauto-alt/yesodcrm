@@ -48,7 +48,24 @@ const aiAnalysisSchema = z.object({
 
 export const listLeads = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { search?: string; status?: string; page?: number; pageSize?: number }) => data)
+  .inputValidator(
+    (data: {
+      search?: string;
+      status?: string;
+      temperatura?: string;
+      unidade?: string;
+      origem?: string;
+      responsavel?: string;
+      interesse?: string;
+      objetivo?: string;
+      tag?: string;
+      aguardando?: string;
+      aula?: string;
+      follow_up?: string;
+      page?: number;
+      pageSize?: number;
+    }) => data,
+  )
   .handler(async ({ data, context }) => {
     const page = data.page ?? 1;
     const pageSize = data.pageSize ?? 25;
@@ -60,6 +77,26 @@ export const listLeads = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .range(from, to);
     if (data.status && data.status !== "all") query = query.eq("status", data.status as any);
+    if (data.temperatura && data.temperatura !== "all")
+      query = query.eq("temperatura", data.temperatura as any);
+    for (const field of ["unidade", "origem", "responsavel", "interesse", "objetivo"] as const) {
+      const value = data[field];
+      if (value && value !== "all") query = query.ilike(field, `%${value.replace(/[%,]/g, "")}%`);
+    }
+    if (data.tag) query = query.contains("tags", [data.tag]);
+    if (data.aguardando === "true") query = query.eq("aguardando_resposta", true);
+    if (data.follow_up === "pending") {
+      query = query
+        .lt("follow_up_em", new Date().toISOString())
+        .not("status", "in", "(ganho,perdido)");
+    }
+    if (data.aula === "today") {
+      const start = new Date(); start.setHours(0, 0, 0, 0);
+      const end = new Date(); end.setHours(23, 59, 59, 999);
+      query = query
+        .gte("aula_experimental_em", start.toISOString())
+        .lte("aula_experimental_em", end.toISOString());
+    }
     if (data.search) {
       const filter = buildSearchFilter(data.search);
       if (filter) query = query.or(filter);
@@ -68,6 +105,7 @@ export const listLeads = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { rows: rows ?? [], count: count ?? 0 };
   });
+
 
 export const listAllLeads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
