@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { LEAD_STATUSES, STATUS_COLORS, STATUS_LABELS } from "@/lib/types";
+import { LEAD_STATUSES, LEAD_TEMPERATURAS, STATUS_COLORS, STATUS_LABELS, TEMPERATURA_LABELS } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LeadForm } from "@/components/leads/lead-form";
 import { LeadDrawer } from "@/components/leads/lead-drawer";
