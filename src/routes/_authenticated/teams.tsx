@@ -84,9 +84,16 @@ function TeamsPage() {
           .select("*, profile:profiles(id, email, full_name)")
           .eq("team_id", team.id)
           .order("role");
-        membersMap[team.id] = (membs ?? []) as unknown as TeamMember[];
+        const seen = new Set<string>();
+        membersMap[team.id] = ((membs ?? []) as unknown as TeamMember[]).filter((m) => {
+          const key = m.user_id ?? m.id;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
       }
       setMembers(membersMap);
+
     } catch (err) {
       console.error("Erro ao buscar dados:", err);
     } finally {
