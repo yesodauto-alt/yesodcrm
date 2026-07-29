@@ -187,11 +187,26 @@ function ConversationDrawer({ id, onClose }: { id: string | null; onClose: () =>
     <Sheet open={!!id} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full sm:max-w-xl flex flex-col p-0">
         <SheetHeader className="p-4 border-b">
-          <SheetTitle>
-            {conv?.leads?.nome ?? "Conversa"}
-            {conv?.numero && <span className="text-sm text-muted-foreground ml-2">· {conv.numero}</span>}
+          <SheetTitle className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+              {(conv?.contacts?.avatar_url ?? conv?.leads?.avatar_url) && (
+                <AvatarImage src={conv?.contacts?.avatar_url ?? conv?.leads?.avatar_url} />
+              )}
+              <AvatarFallback className="text-xs">
+                {initials(contactDisplayName(conv?.contacts?.nome, conv?.leads?.nome))}
+              </AvatarFallback>
+            </Avatar>
+            <span className="flex flex-col text-left">
+              <span>{contactDisplayName(conv?.contacts?.nome, conv?.leads?.nome)}</span>
+              {conv?.numero && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {formatPhone(conv.numero)}
+                </span>
+              )}
+            </span>
           </SheetTitle>
         </SheetHeader>
+
         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-muted/30">
           {conv?.resumo_ai && (
             <Card className="p-3 mb-3 border-primary/30">
