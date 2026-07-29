@@ -61,14 +61,35 @@ function TeamsPage() {
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [showMemberForm, setShowMemberForm] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteSending, setInviteSending] = useState(false);
+  const [invites, setInvites] = useState<any[]>([]);
   const [search, setSearch] = useState("");
 
   const [teamForm, setTeamForm] = useState({ name: "", description: "", unit_type: "sdr_team" });
   const [memberForm, setMemberForm] = useState({ user_email: "", role: "agente", is_lead: false });
+  const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "agente" as const | string });
+
+  const invite = useServerFn(sendInvite);
+  const fetchInvites = useServerFn(listInvites);
+  const revoke = useServerFn(revokeInvite);
+
+  async function loadInvites() {
+    try {
+      setInvites((await fetchInvites()) as any[]);
+    } catch {
+      setInvites([]);
+    }
+  }
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (mounted) loadInvites();
+  }, [mounted]);
+
 
   async function fetchTeams() {
     try {
