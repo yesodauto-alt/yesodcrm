@@ -113,7 +113,7 @@ function ContactsPage() {
         </Dialog>
       </div>
 
-      <Card className="p-3">
+      <Card className="p-3 space-y-2">
         <div className="flex flex-wrap gap-2">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -137,7 +137,27 @@ function ContactsPage() {
             {dir === "asc" ? "Crescente" : "Decrescente"}
           </Button>
         </div>
+        <div className="flex flex-wrap gap-2">
+          {CONTACT_FILTERS.map((f) => (
+            <Input
+              key={f.key}
+              value={filters[f.key]}
+              onChange={(e) => {
+                setPage(1);
+                setFilters((prev) => ({ ...prev, [f.key]: e.target.value }));
+              }}
+              placeholder={f.label}
+              className="w-40"
+            />
+          ))}
+          {activeCount > 0 && (
+            <Button variant="ghost" onClick={() => { setFilters(EMPTY_FILTERS); setPage(1); }}>
+              Limpar filtros ({activeCount})
+            </Button>
+          )}
+        </div>
       </Card>
+
 
       <Card>
         <div className="overflow-x-auto">
