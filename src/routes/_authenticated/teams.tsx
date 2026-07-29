@@ -335,6 +335,37 @@ function TeamsPage() {
             )}
           </Card>
 
+          {invites.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2"><Mail className="h-4 w-4" />Convites</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {invites.map((inv) => (
+                  <div key={inv.id} className="flex items-center justify-between border rounded-lg p-3">
+                    <div>
+                      <div className="text-sm font-medium">{inv.full_name || inv.email}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {inv.email} · {ROLES.find((r) => r.value === inv.role)?.label ?? inv.role}
+                        {inv.teams?.name ? ` · ${inv.teams.name}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={inv.status === "pending" ? "secondary" : "outline"} className="text-[10px] uppercase">{inv.status}</Badge>
+                      {inv.status === "pending" && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await revoke({ data: { id: inv.id } }); loadInvites(); }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+
+
           {/* Hierarquia Visual Fixa */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">Hierarquia de Permissões</h3>
