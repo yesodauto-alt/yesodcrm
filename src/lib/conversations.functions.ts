@@ -3,7 +3,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const CONVERSATION_SELECT =
-  "*, leads(id,nome,whatsapp,telefone,temperatura,status,unidade,responsavel), channels(id,name,connection_type)";
+  "*, leads(id,nome,whatsapp,telefone,temperatura,status,unidade,responsavel,avatar_url), contacts(id,nome,whatsapp,telefone,avatar_url), channels(id,name,connection_type)";
+
 
 export const listAllConversations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -34,9 +35,11 @@ export const listAllConversations = createServerFn({ method: "POST" })
         (r: any) =>
           r.numero?.toLowerCase().includes(s) ||
           r.resumo_ai?.toLowerCase().includes(s) ||
+          r.contacts?.nome?.toLowerCase().includes(s) ||
           r.leads?.nome?.toLowerCase().includes(s),
       );
     }
+
     return out;
   });
 

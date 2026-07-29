@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { contactDisplayName, formatPhone, initials } from "@/lib/phone";
+
 import { MessageSquare, Search, Radio, User, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -114,16 +117,24 @@ function ConversationsPage() {
         </div>
       </Card>
       <div className="grid gap-2">
-        {(data ?? []).map((c: any) => (
+        {(data ?? []).map((c: any) => {
+          const nome = contactDisplayName(c.contacts?.nome, c.leads?.nome);
+          const numero = c.numero ?? c.contacts?.whatsapp ?? c.leads?.whatsapp;
+          const avatar = c.contacts?.avatar_url ?? c.leads?.avatar_url ?? null;
+          return (
           <Card
             key={c.id}
             className="p-3 cursor-pointer hover:bg-muted/40 transition-colors"
             onClick={() => nav({ search: { open: c.id } })}
           >
-            <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex items-start gap-3 flex-wrap">
+              <Avatar className="h-10 w-10">
+                {avatar && <AvatarImage src={avatar} alt={nome} />}
+                <AvatarFallback className="text-xs">{initials(nome)}</AvatarFallback>
+              </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium">{c.leads?.nome ?? "Lead não vinculado"}</span>
+                  <span className="font-medium">{nome}</span>
                   {c.leads?.temperatura && (
                     <Badge variant="outline" className={TEMPERATURA_COLORS[c.leads.temperatura as keyof typeof TEMPERATURA_COLORS]}>
                       {TEMPERATURA_LABELS[c.leads.temperatura as keyof typeof TEMPERATURA_LABELS]}
@@ -135,7 +146,7 @@ function ConversationsPage() {
                   {c.resumo_ai || <span className="italic">Sem resumo da IA ainda.</span>}
                 </div>
                 <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
-                  {c.numero && <span>📱 {c.numero}</span>}
+                  {numero && <span>📱 {formatPhone(numero)}</span>}
                   {c.channels?.name && <span className="flex items-center gap-1"><Radio className="h-3 w-3" />{c.channels.name}</span>}
                   {c.responsavel && <span className="flex items-center gap-1"><User className="h-3 w-3" />{c.responsavel}</span>}
                   <span>
@@ -145,7 +156,9 @@ function ConversationsPage() {
               </div>
             </div>
           </Card>
-        ))}
+          );
+        })}
+
         {(data ?? []).length === 0 && (
           <Card className="p-8 text-center text-sm text-muted-foreground">
             <p className="text-lg">Nenhuma conversa importada ainda</p>
@@ -174,11 +187,26 @@ function ConversationDrawer({ id, onClose }: { id: string | null; onClose: () =>
     <Sheet open={!!id} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full sm:max-w-xl flex flex-col p-0">
         <SheetHeader className="p-4 border-b">
-          <SheetTitle>
-            {conv?.leads?.nome ?? "Conversa"}
-            {conv?.numero && <span className="text-sm text-muted-foreground ml-2">· {conv.numero}</span>}
+          <SheetTitle className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+              {(conv?.contacts?.avatar_url ?? conv?.leads?.avatar_url) && (
+                <AvatarImage src={conv?.contacts?.avatar_url ?? conv?.leads?.avatar_url} />
+              )}
+              <AvatarFallback className="text-xs">
+                {initials(contactDisplayName(conv?.contacts?.nome, conv?.leads?.nome))}
+              </AvatarFallback>
+            </Avatar>
+            <span className="flex flex-col text-left">
+              <span>{contactDisplayName(conv?.contacts?.nome, conv?.leads?.nome)}</span>
+              {conv?.numero && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {formatPhone(conv.numero)}
+                </span>
+              )}
+            </span>
           </SheetTitle>
         </SheetHeader>
+
         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-muted/30">
           {conv?.resumo_ai && (
             <Card className="p-3 mb-3 border-primary/30">

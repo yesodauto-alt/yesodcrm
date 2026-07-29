@@ -28,7 +28,20 @@ function clean<T>(v: T | "" | null | undefined): T | null {
 export const listContacts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (data: { search?: string; page?: number; pageSize?: number; sort?: string; dir?: "asc" | "desc" }) => data,
+    (data: {
+      search?: string;
+      page?: number;
+      pageSize?: number;
+      sort?: string;
+      dir?: "asc" | "desc";
+      unidade?: string;
+      origem?: string;
+      empresa?: string;
+      cargo?: string;
+      interesse?: string;
+      objetivo?: string;
+      tag?: string;
+    }) => data,
   )
   .handler(async ({ data, context }) => {
     const page = data.page ?? 1;
@@ -42,6 +55,18 @@ export const listContacts = createServerFn({ method: "POST" })
       .select("*", { count: "exact" })
       .order(sort, { ascending })
       .range(from, to);
+    for (const field of [
+      "unidade",
+      "origem",
+      "empresa",
+      "cargo",
+      "interesse",
+      "objetivo",
+    ] as const) {
+      const value = data[field];
+      if (value) query = query.ilike(field, `%${value.replace(/[%,]/g, "")}%`);
+    }
+    if (data.tag) query = query.contains("tags", [data.tag]);
     if (data.search) {
       const filter = buildSearchFilter(data.search);
       if (filter) query = query.or(filter);
@@ -50,6 +75,7 @@ export const listContacts = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { rows: rows ?? [], count: count ?? 0 };
   });
+
 
 export const getContact = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

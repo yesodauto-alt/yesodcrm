@@ -59,7 +59,7 @@ function Dashboard() {
             <SdrKpi icon={<Clock className="h-4 w-4 text-amber-500" />} label="Follow-ups Pendentes" value={sstats?.followUps ?? 0} search={{ follow_up: "pending" }} />
             <SdrKpi icon={<CalendarClock className="h-4 w-4 text-emerald-500" />} label="Aulas Experimentais" value={sstats?.aulasHoje ?? 0} search={{ aula: "today" }} />
             <SdrKpi icon={<MessageCircleQuestion className="h-4 w-4 text-purple-500" />} label="Sem resposta" value={sstats?.semResposta ?? 0} search={{ aguardando: "true" }} />
-            <SdrKpi icon={<ListTodo className="h-4 w-4 text-cyan-500" />} label="Tarefas Pendentes" value={sstats?.tarefasPendentes ?? 0} search={{ tarefas: "pendente" }} />
+            <SdrKpi icon={<ListTodo className="h-4 w-4 text-cyan-500" />} label="Tarefas Pendentes" value={sstats?.tarefasPendentes ?? 0} to="/priorities" />
           </div>
         </CardContent>
       </Card>
@@ -74,19 +74,22 @@ function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <SdrKpi icon={<Radio className="h-4 w-4 text-emerald-500" />} label="Online" value={chealth?.online ?? 0} />
-            <SdrKpi icon={<Radio className="h-4 w-4 text-muted-foreground" />} label="Offline" value={chealth?.offline ?? 0} />
-            <SdrKpi icon={<MessageCircleQuestion className="h-4 w-4 text-purple-500" />} label="Mensagens hoje" value={chealth?.mensagensHoje ?? 0} />
+            <SdrKpi icon={<Radio className="h-4 w-4 text-emerald-500" />} label="Online" value={chealth?.online ?? 0} to="/channels" />
+            <SdrKpi icon={<Radio className="h-4 w-4 text-muted-foreground" />} label="Offline" value={chealth?.offline ?? 0} to="/channels" />
+            <SdrKpi icon={<MessageCircleQuestion className="h-4 w-4 text-purple-500" />} label="Mensagens hoje" value={chealth?.mensagensHoje ?? 0} to="/conversations" />
             <div className="p-3 rounded-md border">
               <div className="text-xs text-muted-foreground">Tempo médio de resposta</div>
               <div className="mt-1 text-sm font-medium">Integração pendente</div>
             </div>
-            <div className="p-3 rounded-md border">
-              <div className="text-xs text-muted-foreground">Última sincronização</div>
-              <div className="mt-1 text-sm font-medium">
-                {chealth?.lastSync ? format(new Date(chealth.lastSync), "dd/MM HH:mm", { locale: ptBR }) : "—"}
+            <Link to="/channels" className="block h-full">
+              <div className="p-3 rounded-md border hover:shadow-md hover:border-primary/50 transition-all h-full">
+                <div className="text-xs text-muted-foreground">Última sincronização</div>
+                <div className="mt-1 text-sm font-medium">
+                  {chealth?.lastSync ? format(new Date(chealth.lastSync), "dd/MM HH:mm", { locale: ptBR }) : "—"}
+                </div>
               </div>
-            </div>
+            </Link>
+
           </div>
         </CardContent>
       </Card>
@@ -199,19 +202,32 @@ function Row({ label, value, icon }: { label: string; value: number; icon?: Reac
   );
 }
 
-function SdrKpi({ icon, label, value, search }: { icon: React.ReactNode; label: string; value: number; search?: any }) {
+function SdrKpi({
+  icon,
+  label,
+  value,
+  search,
+  to,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  search?: any;
+  to?: string;
+}) {
   const inner = (
-    <div className="p-3 rounded-md border hover:shadow-md hover:border-primary/50 transition-all">
+    <div className="p-3 rounded-md border hover:shadow-md hover:border-primary/50 transition-all h-full">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</div>
       <div className="mt-1 text-2xl font-semibold">{value}</div>
     </div>
   );
-  if (search) {
+  if (search || to) {
     return (
-      <Link to="/leads" search={search} className="block">
+      <Link to={(to ?? "/leads") as any} search={search ?? {}} className="block h-full">
         {inner}
       </Link>
     );
   }
   return inner;
 }
+

@@ -31,6 +31,22 @@ export const Route = createFileRoute("/_authenticated/contacts")({
   component: ContactsPage,
 });
 
+const CONTACT_FILTERS = [
+  { key: "empresa", label: "Empresa" },
+  { key: "cargo", label: "Cargo" },
+  { key: "unidade", label: "Unidade" },
+  { key: "origem", label: "Origem" },
+  { key: "interesse", label: "Interesse" },
+  { key: "objetivo", label: "Objetivo" },
+  { key: "tag", label: "Tag" },
+] as const;
+
+type ContactFilters = Record<(typeof CONTACT_FILTERS)[number]["key"], string>;
+
+const EMPTY_FILTERS = Object.fromEntries(
+  CONTACT_FILTERS.map((f) => [f.key, ""]),
+) as ContactFilters;
+
 function ContactsPage() {
   const qc = useQueryClient();
   const nav = Route.useNavigate();
@@ -40,14 +56,18 @@ function ContactsPage() {
   const [sort, setSort] = useState("created_at");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [createOpen, setCreateOpen] = useState(false);
+  const [filters, setFilters] = useState<ContactFilters>(EMPTY_FILTERS);
 
   const list = useServerFn(listContacts);
   const create = useServerFn(createContact);
 
+  const activeCount = Object.values(filters).filter(Boolean).length;
+
   const { data } = useQuery({
-    queryKey: ["contacts", { search, page, sort, dir }],
-    queryFn: () => list({ data: { search, page, pageSize: 25, sort, dir } }),
+    queryKey: ["contacts", { search, page, sort, dir, filters }],
+    queryFn: () => list({ data: { search, page, pageSize: 25, sort, dir, ...filters } }),
   });
+
 
   const createMut = useMutation({
     mutationFn: (v: any) => create({ data: v }),
@@ -93,7 +113,7 @@ function ContactsPage() {
         </Dialog>
       </div>
 
-      <Card className="p-3">
+      <Card className="p-3 space-y-2">
         <div className="flex flex-wrap gap-2">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -117,7 +137,27 @@ function ContactsPage() {
             {dir === "asc" ? "Crescente" : "Decrescente"}
           </Button>
         </div>
+        <div className="flex flex-wrap gap-2">
+          {CONTACT_FILTERS.map((f) => (
+            <Input
+              key={f.key}
+              value={filters[f.key]}
+              onChange={(e) => {
+                setPage(1);
+                setFilters((prev) => ({ ...prev, [f.key]: e.target.value }));
+              }}
+              placeholder={f.label}
+              className="w-40"
+            />
+          ))}
+          {activeCount > 0 && (
+            <Button variant="ghost" onClick={() => { setFilters(EMPTY_FILTERS); setPage(1); }}>
+              Limpar filtros ({activeCount})
+            </Button>
+          )}
+        </div>
       </Card>
+
 
       <Card>
         <div className="overflow-x-auto">

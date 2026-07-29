@@ -5,7 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Users, Trash2, Loader2, Shield, Crown, UserCog, Phone, User, Clock, Users2 } from "lucide-react";
+import { Search, Plus, Users, Trash2, Loader2, Shield, Crown, UserCog, Phone, User, Clock, Users2, Mail, X } from "lucide-react";
+import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { listInvites, sendInvite, revokeInvite } from "@/lib/invites.functions";
+
 
 export const Route = createFileRoute("/_authenticated/teams")({
   head: () => ({ meta: [{ title: "Equipes — Yesod CRM" }] }),
@@ -57,14 +61,35 @@ function TeamsPage() {
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [showMemberForm, setShowMemberForm] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteSending, setInviteSending] = useState(false);
+  const [invites, setInvites] = useState<any[]>([]);
   const [search, setSearch] = useState("");
 
   const [teamForm, setTeamForm] = useState({ name: "", description: "", unit_type: "sdr_team" });
   const [memberForm, setMemberForm] = useState({ user_email: "", role: "agente", is_lead: false });
+  const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "agente" });
+
+  const invite = useServerFn(sendInvite);
+  const fetchInvites = useServerFn(listInvites);
+  const revoke = useServerFn(revokeInvite);
+
+  async function loadInvites() {
+    try {
+      setInvites((await fetchInvites()) as any[]);
+    } catch {
+      setInvites([]);
+    }
+  }
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (mounted) loadInvites();
+  }, [mounted]);
+
 
   async function fetchTeams() {
     try {
@@ -84,9 +109,16 @@ function TeamsPage() {
           .select("*, profile:profiles(id, email, full_name)")
           .eq("team_id", team.id)
           .order("role");
-        membersMap[team.id] = (membs ?? []) as unknown as TeamMember[];
+        const seen = new Set<string>();
+        membersMap[team.id] = ((membs ?? []) as unknown as TeamMember[]).filter((m) => {
+          const key = m.user_id ?? m.id;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
       }
       setMembers(membersMap);
+
     } catch (err) {
       console.error("Erro ao buscar dados:", err);
     } finally {
@@ -125,9 +157,14 @@ function TeamsPage() {
 
   async function addMember() {
     if (!memberForm.user_email.trim() || !selectedTeam) return;
-    const { data: userData } = await supabase.from("profiles").select("id").eq("email", memberForm.user_email.trim()).single();
+    const { data: userData } = await supabase.from("profiles").select("id").eq("email", memberForm.user_email.trim().toLowerCase()).maybeSingle();
     if (!userData) {
-      alert("Usuário não encontrado.");
+      alert("Usuário não encontrado. Envie um convite para que ele crie a conta.");
+      return;
+    }
+    const already = (members[selectedTeam] ?? []).some((m) => m.user_id === userData.id);
+    if (already) {
+      alert("Este usuário já faz parte deste time.");
       return;
     }
     const { error } = await supabase.from("team_members").insert({
@@ -141,6 +178,31 @@ function TeamsPage() {
     setShowMemberForm(false);
     fetchTeams();
   }
+
+  async function submitInvite() {
+    if (!inviteForm.email.trim()) return;
+    setInviteSending(true);
+    try {
+      await invite({
+        data: {
+          email: inviteForm.email.trim(),
+          full_name: inviteForm.full_name.trim() || undefined,
+          role: inviteForm.role as any,
+          team_id: selectedTeam ?? undefined,
+          redirect_to: `${window.location.origin}/auth`,
+        },
+      });
+      toast.success("Convite enviado por e-mail.");
+      setInviteForm({ email: "", full_name: "", role: "agente" });
+      setShowInviteForm(false);
+      loadInvites();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao enviar convite");
+    } finally {
+      setInviteSending(false);
+    }
+  }
+
 
   async function updateMemberRole(memberId: string, role: string) {
     await supabase.from("team_members").update({ role }).eq("id", memberId);
@@ -224,7 +286,11 @@ function TeamsPage() {
                       <p className="text-sm text-muted-foreground">{currentTeam?.description || "Time de atendimento Yesod."}</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => setShowMemberForm(true)} className="gap-2 border-primary/20 hover:bg-primary/5"><Plus className="h-4 w-4" />Adicionar Agente</Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setShowInviteForm(true)} className="gap-2 border-primary/20 hover:bg-primary/5"><Mail className="h-4 w-4" />Convidar por e-mail</Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowMemberForm(true)} className="gap-2 border-primary/20 hover:bg-primary/5"><Plus className="h-4 w-4" />Adicionar Agente</Button>
+                  </div>
+
                 </CardHeader>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
@@ -268,6 +334,37 @@ function TeamsPage() {
               </div>
             )}
           </Card>
+
+          {invites.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2"><Mail className="h-4 w-4" />Convites</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {invites.map((inv) => (
+                  <div key={inv.id} className="flex items-center justify-between border rounded-lg p-3">
+                    <div>
+                      <div className="text-sm font-medium">{inv.full_name || inv.email}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {inv.email} · {ROLES.find((r) => r.value === inv.role)?.label ?? inv.role}
+                        {inv.teams?.name ? ` · ${inv.teams.name}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={inv.status === "pending" ? "secondary" : "outline"} className="text-[10px] uppercase">{inv.status}</Badge>
+                      {inv.status === "pending" && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await revoke({ data: { id: inv.id } }); loadInvites(); }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+
 
           {/* Hierarquia Visual Fixa */}
           <div className="space-y-4">
@@ -320,6 +417,35 @@ function TeamsPage() {
           </Card>
         </div>
       )}
+
+      {showInviteForm && (
+        <div className="fixed inset-0 bg-background/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl border-primary/20">
+            <CardHeader><CardTitle className="text-xl">Convidar por e-mail</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase tracking-wider">E-mail</label><Input placeholder="novo@empresa.com" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} /></div>
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase tracking-wider">Nome</label><Input placeholder="Nome completo" value={inviteForm.full_name} onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })} /></div>
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase tracking-wider">Perfil</label>
+                <select className="w-full border rounded-lg p-2 bg-accent/50 text-sm outline-none" value={inviteForm.role} onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}>
+                  {["super_admin", "admin", "gerente", "agente"].map((r) => (
+                    <option key={r} value={r}>{ROLES.find((x) => x.value === r)?.label ?? r}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                O convite será vinculado ao time {currentTeam?.name ?? "selecionado"} e o perfil aplicado automaticamente no primeiro acesso.
+              </p>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowInviteForm(false)}>Cancelar</Button>
+                <Button onClick={submitInvite} disabled={inviteSending} className="px-8">
+                  {inviteSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar convite"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
+
   );
 }

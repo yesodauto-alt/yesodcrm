@@ -21,7 +21,9 @@ import {
   TEMPERATURA_COLORS,
   TEMPERATURA_LABELS,
 } from "@/lib/types";
-import { Search, Flame, CalendarClock, Clock, Sparkles, MessageCircleQuestion } from "lucide-react";
+import { Search, Flame, CalendarClock, Clock, Sparkles, MessageCircleQuestion, ArrowUpDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LeadDrawer } from "@/components/leads/lead-drawer";
@@ -51,12 +53,15 @@ function QueuePage() {
   const { open: openId } = Route.useSearch();
   const [search, setSearch] = useState("");
   const [bucket, setBucket] = useState("all");
+  const [sort, setSort] = useState("prioridade");
+  const [dir, setDir] = useState<"asc" | "desc">("desc");
   const fetchQueue = useServerFn(sdrQueue);
   const { data } = useQuery({
-    queryKey: ["sdr-queue", { search, bucket }],
-    queryFn: () => fetchQueue({ data: { search, bucket } }),
+    queryKey: ["sdr-queue", { search, bucket, sort, dir }],
+    queryFn: () => fetchQueue({ data: { search, bucket, sort, dir } }),
     refetchInterval: 60_000,
   });
+
 
   const rows = data?.rows ?? [];
   const counts: Record<string, number> = {};
@@ -93,8 +98,20 @@ function QueuePage() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={sort} onValueChange={setSort}>
+            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="prioridade">Ordenar: Prioridade</SelectItem>
+              <SelectItem value="ultima_interacao">Ordenar: Última interação</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={() => setDir(dir === "asc" ? "desc" : "asc")} className="gap-2">
+            <ArrowUpDown className="h-4 w-4" />
+            {dir === "asc" ? "Crescente" : "Decrescente"}
+          </Button>
         </div>
       </Card>
+
 
       <Card>
         <div className="overflow-x-auto">

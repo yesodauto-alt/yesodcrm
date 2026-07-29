@@ -16,16 +16,30 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { LEAD_STATUSES, STATUS_COLORS, STATUS_LABELS } from "@/lib/types";
+import { LEAD_STATUSES, LEAD_TEMPERATURAS, STATUS_COLORS, STATUS_LABELS, TEMPERATURA_LABELS } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LeadForm } from "@/components/leads/lead-form";
 import { LeadDrawer } from "@/components/leads/lead-drawer";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const searchSchema = z.object({ open: z.string().optional() });
+const searchSchema = z.object({
+  open: z.string().optional(),
+  status: z.string().optional(),
+  temperatura: z.string().optional(),
+  unidade: z.string().optional(),
+  origem: z.string().optional(),
+  responsavel: z.string().optional(),
+  interesse: z.string().optional(),
+  objetivo: z.string().optional(),
+  tag: z.string().optional(),
+  aguardando: z.string().optional(),
+  aula: z.string().optional(),
+  follow_up: z.string().optional(),
+});
+
 
 export const Route = createFileRoute("/_authenticated/leads")({
   head: () => ({ meta: [{ title: "Leads — Yesod CRM" }] }),
@@ -33,21 +47,60 @@ export const Route = createFileRoute("/_authenticated/leads")({
   component: LeadsPage,
 });
 
+const TEXT_FILTERS = [
+  { key: "unidade", label: "Unidade" },
+  { key: "origem", label: "Origem" },
+  { key: "responsavel", label: "Responsável" },
+  { key: "interesse", label: "Interesse" },
+  { key: "objetivo", label: "Objetivo" },
+  { key: "tag", label: "Tag" },
+] as const;
+
 function LeadsPage() {
   const qc = useQueryClient();
   const nav = Route.useNavigate();
-  const { open: openId } = Route.useSearch();
+  const sp = Route.useSearch();
+  const openId = sp.open;
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
 
   const list = useServerFn(listLeads);
   const create = useServerFn(createLead);
 
+  const filters = {
+    status: sp.status ?? "all",
+    temperatura: sp.temperatura ?? "all",
+    unidade: sp.unidade ?? "",
+    origem: sp.origem ?? "",
+    responsavel: sp.responsavel ?? "",
+    interesse: sp.interesse ?? "",
+    objetivo: sp.objetivo ?? "",
+    tag: sp.tag ?? "",
+    aguardando: sp.aguardando,
+    aula: sp.aula,
+    follow_up: sp.follow_up,
+  };
+
+  function setFilter(key: string, value: string | undefined) {
+    setPage(1);
+    nav({
+      search: (prev: any) => ({ ...prev, [key]: value && value !== "all" ? value : undefined }),
+    });
+  }
+
+  function clearFilters() {
+    setPage(1);
+    nav({ search: (prev: any) => ({ open: prev.open }) });
+  }
+
+  const activeCount = Object.entries(filters).filter(
+    ([, v]) => v && v !== "all",
+  ).length;
+
   const { data } = useQuery({
-    queryKey: ["leads", { search, status, page }],
-    queryFn: () => list({ data: { search, status, page, pageSize: 25 } }),
+    queryKey: ["leads", { search, filters, page }],
+    queryFn: () => list({ data: { search, ...filters, page, pageSize: 25 } }),
   });
 
   const createMut = useMutation({
@@ -81,7 +134,7 @@ function LeadsPage() {
         </Dialog>
       </div>
 
-      <Card className="p-3">
+      <Card className="p-3 space-y-2">
         <div className="flex flex-wrap gap-2">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -92,15 +145,51 @@ function LeadsPage() {
               className="pl-8"
             />
           </div>
-          <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+          <Select value={filters.status} onValueChange={(v) => setFilter("status", v)}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos status</SelectItem>
               {LEAD_STATUSES.map((s) => (<SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>))}
             </SelectContent>
           </Select>
+          <Select value={filters.temperatura} onValueChange={(v) => setFilter("temperatura", v)}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toda temperatura</SelectItem>
+              {LEAD_TEMPERATURAS.map((t) => (
+                <SelectItem key={t} value={t}>{TEMPERATURA_LABELS[t]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {TEXT_FILTERS.map((f) => (
+            <Input
+              key={f.key}
+              value={(filters as any)[f.key]}
+              onChange={(e) => setFilter(f.key, e.target.value)}
+              placeholder={f.label}
+              className="w-40"
+            />
+          ))}
+          <Select
+            value={filters.aguardando === "true" ? "true" : "all"}
+            onValueChange={(v) => setFilter("aguardando", v === "true" ? "true" : undefined)}
+          >
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Resposta: todos</SelectItem>
+              <SelectItem value="true">Aguardando resposta</SelectItem>
+            </SelectContent>
+          </Select>
+          {activeCount > 0 && (
+            <Button variant="ghost" onClick={clearFilters} className="gap-1">
+              <X className="h-4 w-4" /> Limpar filtros ({activeCount})
+            </Button>
+          )}
         </div>
       </Card>
+
 
       <Card>
         <div className="overflow-x-auto">
@@ -122,7 +211,7 @@ function LeadsPage() {
                 <TableRow
                   key={l.id}
                   className="cursor-pointer"
-                  onClick={() => nav({ search: { open: l.id } })}
+                  onClick={() => nav({ search: (prev: any) => ({ ...prev, open: l.id }) })}
                 >
                   <TableCell className="font-medium">{l.nome}</TableCell>
                   <TableCell>{l.empresa ?? "—"}</TableCell>
@@ -158,7 +247,7 @@ function LeadsPage() {
       <LeadDrawer
         id={openId ?? null}
         open={!!openId}
-        onOpenChange={(o) => { if (!o) nav({ search: {} }); }}
+        onOpenChange={(o) => { if (!o) nav({ search: (prev: any) => ({ ...prev, open: undefined }) }); }}
       />
     </div>
   );

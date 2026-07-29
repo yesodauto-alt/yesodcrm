@@ -360,6 +360,7 @@ export type Database = {
       }
       contacts: {
         Row: {
+          avatar_url: string | null
           cargo: string | null
           created_at: string
           created_by: string | null
@@ -381,6 +382,7 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          avatar_url?: string | null
           cargo?: string | null
           created_at?: string
           created_by?: string | null
@@ -402,6 +404,7 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          avatar_url?: string | null
           cargo?: string | null
           created_at?: string
           created_by?: string | null
@@ -766,6 +769,7 @@ export type Database = {
             | null
           ai_ultima_analise: string | null
           aula_experimental_em: string | null
+          avatar_url: string | null
           cargo: string | null
           channel_id: string | null
           conversation_next_action: string | null
@@ -805,6 +809,7 @@ export type Database = {
             | null
           ai_ultima_analise?: string | null
           aula_experimental_em?: string | null
+          avatar_url?: string | null
           cargo?: string | null
           channel_id?: string | null
           conversation_next_action?: string | null
@@ -844,6 +849,7 @@ export type Database = {
             | null
           ai_ultima_analise?: string | null
           aula_experimental_em?: string | null
+          avatar_url?: string | null
           cargo?: string | null
           channel_id?: string | null
           conversation_next_action?: string | null
@@ -1211,6 +1217,59 @@ export type Database = {
           variables?: string[] | null
         }
         Relationships: []
+      }
+      user_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          full_name: string | null
+          id: string
+          invited_by: string | null
+          last_sent_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          invited_by?: string | null
+          last_sent_at?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          invited_by?: string | null
+          last_sent_at?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invites_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
