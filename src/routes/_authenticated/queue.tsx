@@ -96,8 +96,20 @@ function QueuePage() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={sort} onValueChange={setSort}>
+            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="prioridade">Ordenar: Prioridade</SelectItem>
+              <SelectItem value="ultima_interacao">Ordenar: Última interação</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={() => setDir(dir === "asc" ? "desc" : "asc")} className="gap-2">
+            <ArrowUpDown className="h-4 w-4" />
+            {dir === "asc" ? "Crescente" : "Decrescente"}
+          </Button>
         </div>
       </Card>
+
 
       <Card>
         <div className="overflow-x-auto">
