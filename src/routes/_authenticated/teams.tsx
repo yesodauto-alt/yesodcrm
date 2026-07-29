@@ -68,7 +68,7 @@ function TeamsPage() {
 
   const [teamForm, setTeamForm] = useState({ name: "", description: "", unit_type: "sdr_team" });
   const [memberForm, setMemberForm] = useState({ user_email: "", role: "agente", is_lead: false });
-  const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "agente" as const | string });
+  const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "agente" });
 
   const invite = useServerFn(sendInvite);
   const fetchInvites = useServerFn(listInvites);
