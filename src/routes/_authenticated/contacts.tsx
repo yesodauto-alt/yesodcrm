@@ -31,6 +31,22 @@ export const Route = createFileRoute("/_authenticated/contacts")({
   component: ContactsPage,
 });
 
+const CONTACT_FILTERS = [
+  { key: "empresa", label: "Empresa" },
+  { key: "cargo", label: "Cargo" },
+  { key: "unidade", label: "Unidade" },
+  { key: "origem", label: "Origem" },
+  { key: "interesse", label: "Interesse" },
+  { key: "objetivo", label: "Objetivo" },
+  { key: "tag", label: "Tag" },
+] as const;
+
+type ContactFilters = Record<(typeof CONTACT_FILTERS)[number]["key"], string>;
+
+const EMPTY_FILTERS = Object.fromEntries(
+  CONTACT_FILTERS.map((f) => [f.key, ""]),
+) as ContactFilters;
+
 function ContactsPage() {
   const qc = useQueryClient();
   const nav = Route.useNavigate();
@@ -40,14 +56,18 @@ function ContactsPage() {
   const [sort, setSort] = useState("created_at");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [createOpen, setCreateOpen] = useState(false);
+  const [filters, setFilters] = useState<ContactFilters>(EMPTY_FILTERS);
 
   const list = useServerFn(listContacts);
   const create = useServerFn(createContact);
 
+  const activeCount = Object.values(filters).filter(Boolean).length;
+
   const { data } = useQuery({
-    queryKey: ["contacts", { search, page, sort, dir }],
-    queryFn: () => list({ data: { search, page, pageSize: 25, sort, dir } }),
+    queryKey: ["contacts", { search, page, sort, dir, filters }],
+    queryFn: () => list({ data: { search, page, pageSize: 25, sort, dir, ...filters } }),
   });
+
 
   const createMut = useMutation({
     mutationFn: (v: any) => create({ data: v }),
