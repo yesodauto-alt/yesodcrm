@@ -417,6 +417,35 @@ function TeamsPage() {
           </Card>
         </div>
       )}
+
+      {showInviteForm && (
+        <div className="fixed inset-0 bg-background/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl border-primary/20">
+            <CardHeader><CardTitle className="text-xl">Convidar por e-mail</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase tracking-wider">E-mail</label><Input placeholder="novo@empresa.com" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} /></div>
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase tracking-wider">Nome</label><Input placeholder="Nome completo" value={inviteForm.full_name} onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })} /></div>
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase tracking-wider">Perfil</label>
+                <select className="w-full border rounded-lg p-2 bg-accent/50 text-sm outline-none" value={inviteForm.role} onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}>
+                  {["super_admin", "admin", "gerente", "agente"].map((r) => (
+                    <option key={r} value={r}>{ROLES.find((x) => x.value === r)?.label ?? r}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                O convite será vinculado ao time {currentTeam?.name ?? "selecionado"} e o perfil aplicado automaticamente no primeiro acesso.
+              </p>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowInviteForm(false)}>Cancelar</Button>
+                <Button onClick={submitInvite} disabled={inviteSending} className="px-8">
+                  {inviteSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar convite"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
+
   );
 }
