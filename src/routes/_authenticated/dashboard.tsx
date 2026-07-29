@@ -199,19 +199,32 @@ function Row({ label, value, icon }: { label: string; value: number; icon?: Reac
   );
 }
 
-function SdrKpi({ icon, label, value, search }: { icon: React.ReactNode; label: string; value: number; search?: any }) {
+function SdrKpi({
+  icon,
+  label,
+  value,
+  search,
+  to,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  search?: any;
+  to?: string;
+}) {
   const inner = (
-    <div className="p-3 rounded-md border hover:shadow-md hover:border-primary/50 transition-all">
+    <div className="p-3 rounded-md border hover:shadow-md hover:border-primary/50 transition-all h-full">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</div>
       <div className="mt-1 text-2xl font-semibold">{value}</div>
     </div>
   );
-  if (search) {
+  if (search || to) {
     return (
-      <Link to="/leads" search={search} className="block">
+      <Link to={(to ?? "/leads") as any} search={search ?? {}} className="block h-full">
         {inner}
       </Link>
     );
   }
   return inner;
 }
+
