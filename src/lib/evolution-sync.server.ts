@@ -148,7 +148,7 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
     try {
       const nomeReal =
         chat?.pushName ?? chat?.name ?? chat?.verifiedName ?? nameByNumber.get(numero) ?? null;
-      const nome = nomeReal ?? `WhatsApp ${numero.slice(-4)}`;
+      
       const avatar =
         chat?.profilePicUrl ??
         chat?.profilePictureUrl ??
