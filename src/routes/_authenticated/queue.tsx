@@ -51,12 +51,15 @@ function QueuePage() {
   const { open: openId } = Route.useSearch();
   const [search, setSearch] = useState("");
   const [bucket, setBucket] = useState("all");
+  const [sort, setSort] = useState("prioridade");
+  const [dir, setDir] = useState<"asc" | "desc">("desc");
   const fetchQueue = useServerFn(sdrQueue);
   const { data } = useQuery({
-    queryKey: ["sdr-queue", { search, bucket }],
-    queryFn: () => fetchQueue({ data: { search, bucket } }),
+    queryKey: ["sdr-queue", { search, bucket, sort, dir }],
+    queryFn: () => fetchQueue({ data: { search, bucket, sort, dir } }),
     refetchInterval: 60_000,
   });
+
 
   const rows = data?.rows ?? [];
   const counts: Record<string, number> = {};
