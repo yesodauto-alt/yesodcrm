@@ -132,9 +132,14 @@ function TeamsPage() {
 
   async function addMember() {
     if (!memberForm.user_email.trim() || !selectedTeam) return;
-    const { data: userData } = await supabase.from("profiles").select("id").eq("email", memberForm.user_email.trim()).single();
+    const { data: userData } = await supabase.from("profiles").select("id").eq("email", memberForm.user_email.trim().toLowerCase()).maybeSingle();
     if (!userData) {
-      alert("Usuário não encontrado.");
+      alert("Usuário não encontrado. Envie um convite para que ele crie a conta.");
+      return;
+    }
+    const already = (members[selectedTeam] ?? []).some((m) => m.user_id === userData.id);
+    if (already) {
+      alert("Este usuário já faz parte deste time.");
       return;
     }
     const { error } = await supabase.from("team_members").insert({
@@ -148,6 +153,31 @@ function TeamsPage() {
     setShowMemberForm(false);
     fetchTeams();
   }
+
+  async function submitInvite() {
+    if (!inviteForm.email.trim()) return;
+    setInviteSending(true);
+    try {
+      await invite({
+        data: {
+          email: inviteForm.email.trim(),
+          full_name: inviteForm.full_name.trim() || undefined,
+          role: inviteForm.role,
+          team_id: selectedTeam ?? undefined,
+          redirect_to: `${window.location.origin}/auth`,
+        },
+      });
+      toast.success("Convite enviado por e-mail.");
+      setInviteForm({ email: "", full_name: "", role: "agente" });
+      setShowInviteForm(false);
+      loadInvites();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao enviar convite");
+    } finally {
+      setInviteSending(false);
+    }
+  }
+
 
   async function updateMemberRole(memberId: string, role: string) {
     await supabase.from("team_members").update({ role }).eq("id", memberId);
