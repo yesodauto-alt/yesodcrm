@@ -71,9 +71,12 @@ Deno.serve(async (req: Request) => {
     const limit = Math.min(Math.max(Number(requested?.limit) || 50, 1), 200)
     const unidade = channel.units?.[0] ?? channel.unit ?? null
 
+    const deadline = Date.now() + 110_000
+
     const identityByJid = new Map<string, string>()
     const nameByPhone = new Map<string, string>()
     const pictureByPhone = new Map<string, string>()
+    const identityRows = new Map<string, Record<string, unknown>>()
     const { data: savedIdentities } = await db
       .from('evolution_contact_identity')
       .select('canonical_phone, phone_jid, lid_jid, display_name')
@@ -82,12 +85,14 @@ Deno.serve(async (req: Request) => {
       if (identity.phone_jid) identityByJid.set(identity.phone_jid, identity.canonical_phone)
       if (identity.lid_jid) identityByJid.set(identity.lid_jid, identity.canonical_phone)
       if (identity.display_name) nameByPhone.set(identity.canonical_phone, identity.display_name)
+      identityRows.set(identity.canonical_phone, { ...identity, channel_id: channel.id })
     }
 
     try {
       const contacts = asArray(
         await evolutionPost(`/chat/findContacts/${EVOLUTION_INSTANCE}`, {}, apiKey, apiUrl),
       )
+      const pending = new Map<string, Record<string, unknown>>()
       for (const contact of contacts) {
         const jid = jidOf(contact)
         if (!isPersonJid(jid)) continue
@@ -100,7 +105,26 @@ Deno.serve(async (req: Request) => {
         const picture = contact.profilePictureUrl ?? contact.profilePicUrl ?? contact.picture ?? null
         if (name) nameByPhone.set(phone, name)
         if (picture) pictureByPhone.set(phone, picture)
-        await saveIdentity(db, channel.id, phone, jid, lidJids(contact)[0] ?? null, name)
+        const previous = identityRows.get(phone)
+        const row = {
+          channel_id: channel.id,
+          canonical_phone: phone,
+          phone_jid: jid.includes('@s.whatsapp.net')
+            ? jid
+            : previous?.phone_jid ?? `${phone}@s.whatsapp.net`,
+          lid_jid: lidJids(contact)[0] ?? previous?.lid_jid ?? null,
+          display_name: name ?? previous?.display_name ?? null,
+          updated_at: new Date().toISOString(),
+        }
+        identityRows.set(phone, row)
+        pending.set(phone, row)
+      }
+      // Um único upsert em lotes evita milhares de idas ao banco (causa do timeout).
+      const rows = [...pending.values()]
+      for (let i = 0; i < rows.length; i += 500) {
+        const { error } = await db.from('evolution_contact_identity')
+          .upsert(rows.slice(i, i + 500), { onConflict: 'channel_id,canonical_phone' })
+        if (error) throw error
       }
     } catch (error) {
       result.erros.push(`Contatos: ${error instanceof Error ? error.message : 'falha'}`)
@@ -114,6 +138,7 @@ Deno.serve(async (req: Request) => {
         apiUrl,
       ),
     )
+
 
     for (const chat of chats.filter((row) => isPersonJid(jidOf(row))).slice(0, limit)) {
       const jid = jidOf(chat)!
