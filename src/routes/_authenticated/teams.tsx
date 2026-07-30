@@ -104,11 +104,12 @@ function TeamsPage() {
       
       const membersMap: Record<string, TeamMember[]> = {};
       for (const team of data || []) {
-        const { data: membs } = await supabase
+        const { data: membs, error: membersError } = await supabase
           .from("team_members")
-          .select("*, profile:profiles(id, email, full_name)")
+          .select("*, profile:profiles!team_members_user_profile_fkey(id, email, full_name)")
           .eq("team_id", team.id)
           .order("role");
+        if (membersError) throw membersError;
         const seen = new Set<string>();
         membersMap[team.id] = ((membs ?? []) as unknown as TeamMember[]).filter((m) => {
           const key = m.user_id ?? m.id;

@@ -52,6 +52,36 @@ function onlyDigits(value: string) {
   return (value ?? "").replace(/\D/g, "");
 }
 
+function validPhone(value: unknown): string | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const raw = String(value);
+  if (raw.includes("@lid") || raw.includes("@g.us") || raw.includes("broadcast")) return null;
+  const digits = onlyDigits(raw.split("@")[0]);
+  return digits.length >= 8 && digits.length <= 15 ? digits : null;
+}
+
+/** Prioriza o PN real e nunca transforma um identificador @lid em telefone. */
+function canonicalPhone(row: any): string | null {
+  const candidates = [
+    row?.senderPn,
+    row?.phoneNumber,
+    row?.phone,
+    row?.wa_id,
+    row?.remoteJidAlt,
+    row?.key?.senderPn,
+    row?.key?.remoteJidAlt,
+    row?.remoteJid,
+    row?.jid,
+    row?.id,
+    row?.key?.remoteJid,
+  ];
+  for (const candidate of candidates) {
+    const phone = validPhone(candidate);
+    if (phone) return phone;
+  }
+  return null;
+}
+
 function jidOf(row: any): string | null {
   return row?.remoteJid ?? row?.id ?? row?.jid ?? row?.key?.remoteJid ?? null;
 }
@@ -120,13 +150,15 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
   // nomes e fotos vindos da agenda da Evolution
   const nameByNumber = new Map<string, string>();
   const picByNumber = new Map<string, string>();
+  const phoneByJid = new Map<string, string>();
   try {
     const contacts = asArray(await evoPost(`/chat/findContacts/${EVOLUTION_INSTANCE}`, {}));
     for (const c of contacts) {
       const jid = jidOf(c);
       if (!isPersonJid(jid)) continue;
-      const numero = onlyDigits(jid.split("@")[0]);
+      const numero = canonicalPhone(c);
       if (!numero) continue;
+      phoneByJid.set(jid, numero);
       const nome = c?.pushName ?? c?.name ?? c?.notify ?? c?.verifiedName ?? null;
       if (nome) nameByNumber.set(numero, nome);
       const pic = c?.profilePicUrl ?? c?.profilePictureUrl ?? c?.picture ?? null;
@@ -141,8 +173,11 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
   for (const chat of chats.slice(0, limit)) {
     const jid = jidOf(chat);
     if (!isPersonJid(jid)) continue;
-    const numero = onlyDigits(jid.split("@")[0]);
-    if (!numero) continue;
+    const numero = canonicalPhone(chat) ?? phoneByJid.get(jid) ?? null;
+    if (!numero) {
+      result.erros.push(`${jid}: telefone real não informado pela Evolution API`);
+      continue;
+    }
     result.contatosEncontrados += 1;
 
     try {
@@ -153,10 +188,33 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
         chat?.profilePicUrl ??
         chat?.profilePictureUrl ??
         picByNumber.get(numero) ??
-        (await fetchProfilePicture(jid));
+        (await fetchProfilePicture(numero));
 
-      const contact = await upsertContact(db, numero, nomeReal, avatar, unidade, result);
-      const lead = await upsertLead(db, numero, nomeReal, avatar, unidade, channel.id, result);
+      const { data: existing } = await db
+        .from("lead_conversations")
+        .select("id, contact_id, lead_id")
+        .eq("external_id", jid)
+        .maybeSingle();
+
+      const contact = await upsertContact(
+        db,
+        numero,
+        nomeReal,
+        avatar,
+        unidade,
+        result,
+        existing?.contact_id ?? null,
+      );
+      const lead = await upsertLead(
+        db,
+        numero,
+        nomeReal,
+        avatar,
+        unidade,
+        channel.id,
+        result,
+        existing?.lead_id ?? null,
+      );
 
 
       const rawMessages = asArray(
@@ -177,12 +235,6 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
         .sort((a, b) => a.sent_at.localeCompare(b.sent_at));
 
       const lastAt = sorted.length ? sorted[sorted.length - 1].sent_at : null;
-
-      const { data: existing } = await db
-        .from("lead_conversations")
-        .select("id")
-        .eq("external_id", jid)
-        .maybeSingle();
 
       let conversationId: string | null = existing?.id ?? null;
       if (conversationId) {
@@ -245,14 +297,15 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
   return result;
 }
 
-/** Busca a foto de perfil do contato na Evolution (silencioso em caso de falha). */
-async function fetchProfilePicture(jid: string): Promise<string | null> {
+/** Busca a foto de perfil pelo telefone real e registra falhas sem interromper a sincronização. */
+async function fetchProfilePicture(numero: string): Promise<string | null> {
   try {
     const res = await evoPost(`/chat/fetchProfilePictureUrl/${EVOLUTION_INSTANCE}`, {
-      number: jid,
+      number: numero,
     });
-    return res?.profilePictureUrl ?? res?.url ?? null;
-  } catch {
+    return res?.profilePictureUrl ?? res?.profilePicUrl ?? res?.url ?? null;
+  } catch (error) {
+    console.warn(`Evolution: foto indisponível para ${numero}`, error);
     return null;
   }
 }
@@ -273,17 +326,29 @@ async function upsertContact(
   avatar: string | null,
   unidade: string | null,
   result: SyncResult,
+  linkedContactId: string | null,
 ) {
-  const { data: found } = await db
+  const { data: byPhone } = await db
     .from("contacts")
-    .select("id, nome, avatar_url")
+    .select("id, nome, avatar_url, whatsapp, telefone")
     .eq("whatsapp", numero)
     .maybeSingle();
+  let found = byPhone;
+  if (!found && linkedContactId) {
+    const { data: linked } = await db
+      .from("contacts")
+      .select("id, nome, avatar_url, whatsapp, telefone")
+      .eq("id", linkedContactId)
+      .maybeSingle();
+    found = linked;
+  }
 
   if (found) {
     const patch: Record<string, unknown> = {};
     if (nomeReal && (isPlaceholder(found.nome) || found.nome !== nomeReal)) patch.nome = nomeReal;
     if (avatar && avatar !== found.avatar_url) patch.avatar_url = avatar;
+    if (found.whatsapp !== numero) patch.whatsapp = numero;
+    if (found.telefone !== numero) patch.telefone = numero;
     if (Object.keys(patch).length) {
       await db.from("contacts").update(patch).eq("id", found.id);
     }
@@ -318,17 +383,29 @@ async function upsertLead(
   unidade: string | null,
   channelId: string,
   result: SyncResult,
+  linkedLeadId: string | null,
 ) {
-  const { data: found } = await db
+  const { data: byPhone } = await db
     .from("leads")
-    .select("id, nome, avatar_url")
+    .select("id, nome, avatar_url, whatsapp, telefone")
     .eq("whatsapp", numero)
     .maybeSingle();
+  let found = byPhone;
+  if (!found && linkedLeadId) {
+    const { data: linked } = await db
+      .from("leads")
+      .select("id, nome, avatar_url, whatsapp, telefone")
+      .eq("id", linkedLeadId)
+      .maybeSingle();
+    found = linked;
+  }
 
   if (found) {
     const patch: Record<string, unknown> = {};
     if (nomeReal && isPlaceholder(found.nome)) patch.nome = nomeReal;
     if (avatar && avatar !== found.avatar_url) patch.avatar_url = avatar;
+    if (found.whatsapp !== numero) patch.whatsapp = numero;
+    if (found.telefone !== numero) patch.telefone = numero;
     if (Object.keys(patch).length) {
       await db.from("leads").update(patch).eq("id", found.id);
     }
@@ -356,4 +433,3 @@ async function upsertLead(
   result.leadsCriados += 1;
   return created;
 }
-

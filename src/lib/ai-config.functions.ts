@@ -51,6 +51,31 @@ export const ensureAssistants = createServerFn({ method: "POST" })
       .select("*")
       .order("sector");
     if (error) throw new Error(error.message);
+
+    if (await isSuperAdmin(context)) {
+      const { data: existingBases, error: basesError } = await context.supabase
+        .from("ai_knowledge_bases")
+        .select("assistant_id");
+      if (basesError) throw new Error(basesError.message);
+
+      const assistantIdsWithBase = new Set(
+        (existingBases ?? []).map((base: any) => base.assistant_id),
+      );
+      const missingBases = (rows ?? []).filter(
+        (assistant: any) => !assistantIdsWithBase.has(assistant.id),
+      );
+      if (missingBases.length) {
+        const { error: insertError } = await context.supabase.from("ai_knowledge_bases").insert(
+          missingBases.map((assistant: any) => ({
+            assistant_id: assistant.id,
+            name: `Base — ${assistant.name}`,
+            team_id: assistant.team_id ?? null,
+          })) as any,
+        );
+        if (insertError) throw new Error(insertError.message);
+      }
+    }
+
     return rows ?? [];
   });
 
@@ -100,6 +125,13 @@ export const updateAssistant = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
+
+    const { error: kbError } = await context.supabase
+      .from("ai_knowledge_bases")
+      .update({ team_id: row.team_id ?? null } as any)
+      .eq("assistant_id", id);
+    if (kbError) throw new Error(kbError.message);
+
     return row;
   });
 
@@ -150,15 +182,32 @@ export const getKnowledgeBase = createServerFn({ method: "POST" })
         .single();
       kb = created;
     }
-    if (!kb) return { base: null, documents: [] as any[] };
+    if (!kb) {
+      return { base: null, documents: [] as any[], canEditDocuments: false };
+    }
 
-    const { data: docs } = await context.supabase
+    const { data: docs, error: docsError } = await context.supabase
       .from("ai_knowledge_documents")
       .select("*")
       .eq("knowledge_base_id", (kb as any).id)
       .order("created_at", { ascending: false });
+    if (docsError) throw new Error(docsError.message);
 
-    return { base: kb, documents: docs ?? [] };
+    const superAdmin = await isSuperAdmin(context);
+    let canEditDocuments = superAdmin;
+    if (!canEditDocuments && (kb as any).team_id) {
+      const { data: membership, error: membershipError } = await context.supabase
+        .from("team_members")
+        .select("id")
+        .eq("team_id", (kb as any).team_id)
+        .eq("user_id", context.userId)
+        .eq("active", true)
+        .maybeSingle();
+      if (membershipError) throw new Error(membershipError.message);
+      canEditDocuments = Boolean(membership);
+    }
+
+    return { base: kb, documents: docs ?? [], canEditDocuments };
   });
 
 export const upsertKnowledgeDocument = createServerFn({ method: "POST" })

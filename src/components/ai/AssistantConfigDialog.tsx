@@ -56,14 +56,12 @@ export function AssistantConfigDialog({
   open,
   onOpenChange,
   canEdit,
-  canEditDocs,
   onSaved,
 }: {
   assistant: AssistantRow | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   canEdit: boolean;
-  canEditDocs: boolean;
   onSaved: (row: AssistantRow) => void;
 }) {
   const save = useServerFn(updateAssistant);
@@ -79,6 +77,7 @@ export function AssistantConfigDialog({
   const [audit, setAudit] = useState<any[]>([]);
   const [kb, setKb] = useState<any>(null);
   const [docs, setDocs] = useState<any[]>([]);
+  const [canEditDocs, setCanEditDocs] = useState(false);
   const [docTitle, setDocTitle] = useState("");
   const [docContent, setDocContent] = useState("");
   const [docFile, setDocFile] = useState<File | null>(null);
@@ -98,8 +97,12 @@ export function AssistantConfigDialog({
       .then((r: any) => {
         setKb(r.base);
         setDocs(r.documents ?? []);
+        setCanEditDocs(Boolean(r.canEditDocuments));
       })
-      .catch((e: any) => toast.error(e.message));
+      .catch((e: any) => {
+        setCanEditDocs(false);
+        toast.error(e.message);
+      });
   }, [assistant, open]);
 
   if (!form) return null;
