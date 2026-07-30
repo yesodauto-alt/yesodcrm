@@ -1342,6 +1342,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_channel: { Args: { _channel_id: string }; Returns: boolean }
+      can_access_conversation: {
+        Args: { _conversation_id: string }
+        Returns: boolean
+      }
+      can_access_conversation_lead: {
+        Args: { _lead_id: string }
+        Returns: boolean
+      }
       can_edit_kb_docs: {
         Args: { _kb_id: string; _user_id?: string }
         Returns: boolean
