@@ -142,15 +142,20 @@ Deno.serve(async (req: Request) => {
 
     for (const chat of chats.filter((row) => isPersonJid(jidOf(row))).slice(0, limit)) {
       const jid = jidOf(chat)!
+      if (Date.now() > deadline) {
+        result.erros.push('Tempo limite atingido: rode a sincronização novamente para continuar.')
+        break
+      }
       try {
         const rawMessages = asArray(
           await evolutionPost(
             `/chat/findMessages/${EVOLUTION_INSTANCE}`,
-            { where: { key: { remoteJid: jid } }, sort: 'desc', page: 1, limit: 1000 },
+            { where: { key: { remoteJid: jid } }, sort: 'desc', page: 1, limit: 200 },
             apiKey,
             apiUrl,
           ),
         )
+
         const phone = canonicalPhone(chat) ?? identityByJid.get(jid) ??
           rawMessages.map(canonicalPhone).find(Boolean) ?? null
         if (!phone) {
