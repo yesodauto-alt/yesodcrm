@@ -99,13 +99,19 @@ export function messageTimestamp(row: any): string {
   return new Date().toISOString()
 }
 
+export function normalizeBaseUrl(value?: string | null): string {
+  const raw = String(value ?? '').trim().replace(/\/+$/, '')
+  if (!raw) return EVOLUTION_PUBLIC_URL
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, '')}`
+}
+
 export async function evolutionPost(
   path: string,
   body: unknown,
   key: string,
   baseUrl = EVOLUTION_PUBLIC_URL,
 ) {
-  const response = await fetch(`${baseUrl.replace(/\/+$/, '')}${path}`, {
+  const response = await fetch(`${normalizeBaseUrl(baseUrl)}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: key },
     body: JSON.stringify(body ?? {}),
