@@ -12,11 +12,29 @@ import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Entrar — Yesod CRM" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : undefined,
+  }),
   component: AuthPage,
 });
 
+// Only same-origin relative paths are accepted as a post-login redirect target.
+function safeNext(next?: string) {
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : undefined;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const redirectTo = safeNext(next);
+
+  async function goAfterAuth() {
+    if (redirectTo) {
+      window.location.href = redirectTo;
+      return;
+    }
+    await navigate({ to: "/dashboard", replace: true });
+  }
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -24,9 +42,12 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+      if (data.session) {
+        if (redirectTo) window.location.href = redirectTo;
+        else navigate({ to: "/dashboard", replace: true });
+      }
     });
-  }, [navigate]);
+  }, [navigate, redirectTo]);
 
   function authMessage(message: string) {
     const normalized = message.toLowerCase();
@@ -58,7 +79,7 @@ function AuthPage() {
         return;
       }
       toast.success("Login realizado");
-      await navigate({ to: "/dashboard", replace: true });
+      await goAfterAuth();
     } finally {
       setLoading(false);
     }
@@ -72,7 +93,7 @@ function AuthPage() {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: redirectTo ? `${window.location.origin}${redirectTo}` : window.location.origin,
           data: { full_name: name.trim() },
         },
       });
@@ -82,7 +103,7 @@ function AuthPage() {
       }
       if (data.session) {
         toast.success("Conta criada");
-        await navigate({ to: "/dashboard", replace: true });
+        await goAfterAuth();
         return;
       }
       toast.success("Conta criada. Confirme seu email e depois entre com sua senha.");
@@ -93,10 +114,12 @@ function AuthPage() {
 
   async function google() {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: redirectTo ? `${window.location.origin}${redirectTo}` : window.location.origin,
+    });
     setLoading(false);
     if (result.error) toast.error(result.error.message);
-    if (!result.redirected && !result.error) navigate({ to: "/dashboard", replace: true });
+    if (!result.redirected && !result.error) await goAfterAuth();
   }
 
   return (
