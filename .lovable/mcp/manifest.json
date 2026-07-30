@@ -1,0 +1,325 @@
+{
+  "version": 1,
+  "sdk_version": "0.25.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://tkhiqdekaikxfgrluwxw.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "yesod-crm",
+      "version": "0.1.0",
+      "title": "Yesod CRM"
+    },
+    "tools": [
+      {
+        "name": "list_leads",
+        "title": "Listar leads",
+        "description": "Lista os leads do CRM visíveis para o usuário autenticado, com filtros opcionais por status, temperatura, unidade e busca por nome/empresa/email.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "search": {
+              "description": "Texto para buscar em nome, empresa ou email.",
+              "type": "string"
+            },
+            "status": {
+              "description": "Filtra pelo status do lead.",
+              "type": "string",
+              "enum": [
+                "novo",
+                "contato",
+                "diagnostico",
+                "proposta",
+                "negociacao",
+                "ganho",
+                "perdido"
+              ]
+            },
+            "temperatura": {
+              "type": "string",
+              "enum": [
+                "frio",
+                "morno",
+                "quente"
+              ]
+            },
+            "unidade": {
+              "type": "string"
+            },
+            "limit": {
+              "description": "Número máximo de leads (padrão 25, máx 100).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_lead",
+        "title": "Detalhes do lead",
+        "description": "Retorna todos os dados de um lead do CRM pelo id, incluindo análise de IA, resumo da conversa e próximas ações.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "UUID do lead."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_lead",
+        "title": "Criar lead",
+        "description": "Cria um novo lead no CRM em nome do usuário autenticado.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "nome": {
+              "type": "string",
+              "description": "Nome do lead."
+            },
+            "empresa": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "telefone": {
+              "type": "string"
+            },
+            "whatsapp": {
+              "type": "string"
+            },
+            "origem": {
+              "description": "Origem do lead, ex: Instagram, Indicação.",
+              "type": "string"
+            },
+            "unidade": {
+              "type": "string"
+            },
+            "interesse": {
+              "type": "string"
+            },
+            "objetivo": {
+              "type": "string"
+            },
+            "valor": {
+              "type": "number"
+            },
+            "observacoes": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "novo",
+                "contato",
+                "diagnostico",
+                "proposta",
+                "negociacao",
+                "ganho",
+                "perdido"
+              ]
+            }
+          },
+          "required": [
+            "nome"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_lead_status",
+        "title": "Atualizar status do lead",
+        "description": "Atualiza o status do funil e, opcionalmente, a temperatura e observações de um lead existente.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "UUID do lead."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "novo",
+                "contato",
+                "diagnostico",
+                "proposta",
+                "negociacao",
+                "ganho",
+                "perdido"
+              ],
+              "description": "Novo status do lead."
+            },
+            "temperatura": {
+              "type": "string",
+              "enum": [
+                "frio",
+                "morno",
+                "quente"
+              ]
+            },
+            "observacoes": {
+              "description": "Observações adicionais sobre o lead.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "status"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_tasks",
+        "title": "Listar tarefas",
+        "description": "Lista as tarefas do CRM visíveis para o usuário autenticado, com filtro por status e lead.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "pendente",
+                "concluida",
+                "cancelada"
+              ]
+            },
+            "lead_id": {
+              "description": "UUID do lead relacionado.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Número máximo de tarefas (padrão 25, máx 100).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_task",
+        "title": "Criar tarefa",
+        "description": "Cria uma tarefa no CRM, opcionalmente vinculada a um lead ou contato.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string",
+              "description": "Título da tarefa."
+            },
+            "descricao": {
+              "type": "string"
+            },
+            "prioridade": {
+              "type": "string",
+              "enum": [
+                "baixa",
+                "media",
+                "alta"
+              ]
+            },
+            "due_date": {
+              "description": "Data de vencimento em formato ISO 8601.",
+              "type": "string"
+            },
+            "lead_id": {
+              "description": "UUID do lead relacionado.",
+              "type": "string"
+            },
+            "contact_id": {
+              "description": "UUID do contato relacionado.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "titulo"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_contacts",
+        "title": "Listar contatos",
+        "description": "Lista os contatos do CRM visíveis para o usuário autenticado, com busca opcional.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "search": {
+              "description": "Texto para buscar em nome, empresa ou email.",
+              "type": "string"
+            },
+            "unidade": {
+              "type": "string"
+            },
+            "limit": {
+              "description": "Número máximo de contatos (padrão 25, máx 100).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

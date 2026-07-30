@@ -27,6 +27,7 @@ import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedChannelsRouteImport } from './routes/_authenticated/channels'
 import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenticated/automations'
 import { Route as AuthenticatedAiAssistantRouteImport } from './routes/_authenticated/ai-assistant'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicLeadsIndexRouteImport } from './routes/api/public/leads/index'
 import { Route as ApiPublicConversationsIndexRouteImport } from './routes/api/public/conversations/index'
 import { Route as ApiPublicContactsIndexRouteImport } from './routes/api/public/contacts/index'
@@ -136,6 +137,11 @@ const AuthenticatedAiAssistantRoute =
     path: '/ai-assistant',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicLeadsIndexRoute = ApiPublicLeadsIndexRouteImport.update({
   id: '/api/public/leads/',
   path: '/api/public/leads/',
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof AuthenticatedSupportRoute
   '/teams': typeof AuthenticatedTeamsRoute
   '/templates': typeof AuthenticatedTemplatesRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
   '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
@@ -282,6 +289,7 @@ export interface FileRoutesByTo {
   '/support': typeof AuthenticatedSupportRoute
   '/teams': typeof AuthenticatedTeamsRoute
   '/templates': typeof AuthenticatedTemplatesRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
   '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
@@ -319,6 +327,7 @@ export interface FileRoutesById {
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/teams': typeof AuthenticatedTeamsRoute
   '/_authenticated/templates': typeof AuthenticatedTemplatesRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
   '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
@@ -356,6 +365,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/teams'
     | '/templates'
+    | '/.lovable/oauth/consent'
     | '/api/public/webhooks/ai-analysis'
     | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
@@ -391,6 +401,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/teams'
     | '/templates'
+    | '/.lovable/oauth/consent'
     | '/api/public/webhooks/ai-analysis'
     | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
@@ -427,6 +438,7 @@ export interface FileRouteTypes {
     | '/_authenticated/support'
     | '/_authenticated/teams'
     | '/_authenticated/templates'
+    | '/.lovable/oauth/consent'
     | '/api/public/webhooks/ai-analysis'
     | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
@@ -449,6 +461,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicWebhooksAiAnalysisRoute: typeof ApiPublicWebhooksAiAnalysisRoute
   ApiPublicWebhooksChannelStatusRoute: typeof ApiPublicWebhooksChannelStatusRoute
   ApiPublicWebhooksNewContactRoute: typeof ApiPublicWebhooksNewContactRoute
@@ -594,6 +607,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ai-assistant'
       preLoaderRoute: typeof AuthenticatedAiAssistantRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/leads/': {
       id: '/api/public/leads/'
@@ -753,6 +773,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicWebhooksAiAnalysisRoute: ApiPublicWebhooksAiAnalysisRoute,
   ApiPublicWebhooksChannelStatusRoute: ApiPublicWebhooksChannelStatusRoute,
   ApiPublicWebhooksNewContactRoute: ApiPublicWebhooksNewContactRoute,
