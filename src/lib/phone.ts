@@ -7,7 +7,8 @@ export function onlyDigits(value?: string | null) {
 /** Retorna apenas telefones plausíveis; IDs internos da Evolution não passam. */
 export function validDisplayPhone(value?: string | null): string | null {
   const digits = onlyDigits(value);
-  return digits.length >= 8 && digits.length <= 15 ? digits : null;
+  if (digits.length < 8 || digits.length > 13) return null;
+  return digits;
 }
 
 /** Formata um número em padrão legível (BR quando possível). */

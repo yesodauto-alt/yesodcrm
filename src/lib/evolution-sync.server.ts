@@ -60,23 +60,58 @@ function validPhone(value: unknown): string | null {
   return digits.length >= 8 && digits.length <= 15 ? digits : null;
 }
 
-/** Prioriza o PN real e nunca transforma um identificador @lid em telefone. */
+function explicitPn(value: unknown): string | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const raw = String(value);
+  if (
+    raw.includes("@s.whatsapp.net") ||
+    raw.includes("@c.us") ||
+    (!raw.includes("@") && onlyDigits(raw).length >= 8 && onlyDigits(raw).length <= 13)
+  ) {
+    return validPhone(raw);
+  }
+  return null;
+}
+
+function lidKeys(row: any): string[] {
+  return [
+    row?.id,
+    row?.jid,
+    row?.lid,
+    row?.remoteJid,
+    row?.remoteJidAlt,
+    row?.key?.remoteJid,
+    row?.key?.remoteJidAlt,
+  ].filter((value): value is string => typeof value === "string" && value.includes("@lid"));
+}
+
+/** Prioriza campos PN/JID reais e nunca transforma um LID numérico em telefone. */
 function canonicalPhone(row: any): string | null {
-  const candidates = [
+  const pnCandidates = [
     row?.senderPn,
+    row?.participantPn,
+    row?.sender,
+    row?.key?.participantPn,
     row?.phoneNumber,
     row?.phone,
     row?.wa_id,
-    row?.remoteJidAlt,
     row?.key?.senderPn,
+  ];
+  for (const candidate of pnCandidates) {
+    const phone = explicitPn(candidate);
+    if (phone) return phone;
+  }
+
+  const jidCandidates = [
+    row?.remoteJidAlt,
     row?.key?.remoteJidAlt,
     row?.remoteJid,
     row?.jid,
     row?.id,
     row?.key?.remoteJid,
   ];
-  for (const candidate of candidates) {
-    const phone = validPhone(candidate);
+  for (const candidate of jidCandidates) {
+    const phone = explicitPn(candidate);
     if (phone) return phone;
   }
   return null;
@@ -159,6 +194,7 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
       const numero = canonicalPhone(c);
       if (!numero) continue;
       phoneByJid.set(jid, numero);
+      for (const lid of lidKeys(c)) phoneByJid.set(lid, numero);
       const nome = c?.pushName ?? c?.name ?? c?.notify ?? c?.verifiedName ?? null;
       if (nome) nameByNumber.set(numero, nome);
       const pic = c?.profilePicUrl ?? c?.profilePictureUrl ?? c?.picture ?? null;
@@ -183,6 +219,7 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
     const numero =
       canonicalPhone(chat) ??
       phoneByJid.get(jid) ??
+      rawMessages.map((message) => phoneByJid.get(jidOf(message) ?? "")).find(Boolean) ??
       rawMessages.map(canonicalPhone).find(Boolean) ??
       null;
     if (!numero) {
