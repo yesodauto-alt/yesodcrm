@@ -14,5 +14,21 @@ export const syncConversations = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     if (!isAdmin) throw new Error("Apenas administradores podem sincronizar conversas.");
-    return runConversationSync(data.limit);
+    try {
+      return await runConversationSync(data.limit);
+    } catch (error) {
+      return {
+        contatosEncontrados: 0,
+        contatosCriados: 0,
+        leadsCriados: 0,
+        conversasImportadas: 0,
+        conversasAtualizadas: 0,
+        mensagensSincronizadas: 0,
+        erros: [
+          error instanceof Error
+            ? error.message
+            : "Falha ao conectar na Evolution API. Verifique a URL e a chave configuradas.",
+        ],
+      };
+    }
   });
