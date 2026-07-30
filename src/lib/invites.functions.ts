@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ROLE = z.enum(["super_admin", "admin", "gerente", "agente", "member"]);
+const TEAM_ROLE = z.enum(["super_admin", "admin", "gerente", "sdr", "agente", "recepcao"]);
 
 async function assertAdmin(context: any) {
   const { data } = await context.supabase.rpc("is_admin_or_above", { _user_id: context.userId });
@@ -84,4 +85,63 @@ export const revokeInvite = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const createInternalUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({
+      email: z.string().trim().email().max(255),
+      full_name: z.string().trim().min(2).max(120),
+      password: z.string().min(8).max(128),
+      role: TEAM_ROLE,
+      team_id: z.string().uuid(),
+      is_lead: z.boolean().default(false),
+    }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const email = data.email.toLowerCase();
+    const globalRole = data.role === "sdr" || data.role === "recepcao" ? "agente" : data.role;
+
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { full_name: data.full_name },
+    });
+    if (createError || !created.user) {
+      throw new Error(createError?.message ?? "Não foi possível cadastrar o usuário.");
+    }
+
+    try {
+      const userId = created.user.id;
+      const { error: profileError } = await admin.from("profiles").upsert({
+        id: userId,
+        email,
+        full_name: data.full_name,
+      });
+      if (profileError) throw profileError;
+
+      const { error: roleError } = await admin.from("user_roles").upsert(
+        { user_id: userId, role: globalRole },
+        { onConflict: "user_id,role" },
+      );
+      if (roleError) throw roleError;
+
+      const { error: memberError } = await admin.from("team_members").insert({
+        user_id: userId,
+        team_id: data.team_id,
+        role: data.role,
+        is_lead: data.is_lead,
+      });
+      if (memberError) throw memberError;
+
+      return { id: userId, email };
+    } catch (error: any) {
+      await admin.auth.admin.deleteUser(created.user.id);
+      throw new Error(error?.message ?? "Não foi possível concluir o cadastro interno.");
+    }
   });

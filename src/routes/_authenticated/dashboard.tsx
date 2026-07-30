@@ -30,8 +30,8 @@ function Dashboard() {
   const kpis = [
     { label: "Total de Leads", value: data?.total ?? 0, icon: Users, color: "text-foreground", search: {} },
     { label: "Novos", value: data?.byStatus?.novo ?? 0, icon: Sparkles, color: "text-blue-500", search: { status: "novo" } },
-    { label: "Em Atendimento", value: (data?.byStatus?.contato ?? 0) + (data?.byStatus?.diagnostico ?? 0), icon: TrendingUp, color: "text-purple-500", search: { status: "contato" } },
-    { label: "Propostas", value: (data?.byStatus?.proposta ?? 0) + (data?.byStatus?.negociacao ?? 0), icon: Handshake, color: "text-orange-500", search: { status: "proposta" } },
+    { label: "Em Atendimento", value: data?.byStatus?.contato ?? 0, icon: TrendingUp, color: "text-purple-500", search: { status: "contato" } },
+    { label: "Propostas", value: data?.byStatus?.proposta ?? 0, icon: Handshake, color: "text-orange-500", search: { status: "proposta" } },
     { label: "Ganhos", value: data?.byStatus?.ganho ?? 0, icon: Trophy, color: "text-emerald-500", search: { status: "ganho" } },
     { label: "Perdidos", value: data?.byStatus?.perdido ?? 0, icon: XCircle, color: "text-rose-500", search: { status: "perdido" } },
   ];
@@ -230,4 +230,3 @@ function SdrKpi({
   }
   return inner;
 }
-

@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Users, Trash2, Loader2, Shield, Crown, UserCog, Phone, User, Clock, Users2, Mail, X } from "lucide-react";
+import { Search, Plus, Users, Trash2, Loader2, Shield, Crown, UserCog, Phone, User, Clock, Users2, Mail, X, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { listInvites, sendInvite, revokeInvite } from "@/lib/invites.functions";
+import { createInternalUser, listInvites, sendInvite, revokeInvite } from "@/lib/invites.functions";
 
 
 export const Route = createFileRoute("/_authenticated/teams")({
@@ -62,17 +62,27 @@ function TeamsPage() {
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [showInternalUserForm, setShowInternalUserForm] = useState(false);
   const [inviteSending, setInviteSending] = useState(false);
+  const [internalUserSaving, setInternalUserSaving] = useState(false);
   const [invites, setInvites] = useState<any[]>([]);
   const [search, setSearch] = useState("");
 
   const [teamForm, setTeamForm] = useState({ name: "", description: "", unit_type: "sdr_team" });
   const [memberForm, setMemberForm] = useState({ user_email: "", role: "agente", is_lead: false });
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "agente" });
+  const [internalUserForm, setInternalUserForm] = useState({
+    email: "",
+    full_name: "",
+    password: "",
+    role: "agente",
+    is_lead: false,
+  });
 
   const invite = useServerFn(sendInvite);
   const fetchInvites = useServerFn(listInvites);
   const revoke = useServerFn(revokeInvite);
+  const registerInternalUser = useServerFn(createInternalUser);
 
   async function loadInvites() {
     try {
@@ -204,6 +214,31 @@ function TeamsPage() {
     }
   }
 
+  async function submitInternalUser() {
+    if (!selectedTeam || !internalUserForm.email.trim() || !internalUserForm.full_name.trim()) return;
+    setInternalUserSaving(true);
+    try {
+      await registerInternalUser({
+        data: {
+          email: internalUserForm.email.trim(),
+          full_name: internalUserForm.full_name.trim(),
+          password: internalUserForm.password,
+          role: internalUserForm.role as any,
+          team_id: selectedTeam,
+          is_lead: internalUserForm.is_lead,
+        },
+      });
+      toast.success("Usuário cadastrado e vinculado ao time.");
+      setInternalUserForm({ email: "", full_name: "", password: "", role: "agente", is_lead: false });
+      setShowInternalUserForm(false);
+      fetchTeams();
+    } catch (error: any) {
+      toast.error(error?.message ?? "Falha ao cadastrar usuário");
+    } finally {
+      setInternalUserSaving(false);
+    }
+  }
+
 
   async function updateMemberRole(memberId: string, role: string) {
     await supabase.from("team_members").update({ role }).eq("id", memberId);
@@ -289,6 +324,7 @@ function TeamsPage() {
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setShowInviteForm(true)} className="gap-2 border-primary/20 hover:bg-primary/5"><Mail className="h-4 w-4" />Convidar por e-mail</Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowInternalUserForm(true)} className="gap-2 border-primary/20 hover:bg-primary/5"><UserPlus className="h-4 w-4" />Cadastrar usuário</Button>
                     <Button variant="outline" size="sm" onClick={() => setShowMemberForm(true)} className="gap-2 border-primary/20 hover:bg-primary/5"><Plus className="h-4 w-4" />Adicionar Agente</Button>
                   </div>
 
@@ -440,6 +476,32 @@ function TeamsPage() {
                 <Button variant="ghost" onClick={() => setShowInviteForm(false)}>Cancelar</Button>
                 <Button onClick={submitInvite} disabled={inviteSending} className="px-8">
                   {inviteSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar convite"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showInternalUserForm && (
+        <div className="fixed inset-0 bg-background/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl border-primary/20">
+            <CardHeader><CardTitle className="text-xl">Cadastrar usuário interno</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase tracking-wider">Nome</label><Input placeholder="Nome completo" value={internalUserForm.full_name} onChange={(e) => setInternalUserForm({ ...internalUserForm, full_name: e.target.value })} /></div>
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase tracking-wider">E-mail de acesso</label><Input type="email" placeholder="usuario@empresa.com" value={internalUserForm.email} onChange={(e) => setInternalUserForm({ ...internalUserForm, email: e.target.value })} /></div>
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase tracking-wider">Senha temporária</label><Input type="password" placeholder="Mínimo de 8 caracteres" value={internalUserForm.password} onChange={(e) => setInternalUserForm({ ...internalUserForm, password: e.target.value })} /></div>
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase tracking-wider">Função</label>
+                <select className="w-full border rounded-lg p-2 bg-accent/50 text-sm outline-none" value={internalUserForm.role} onChange={(e) => setInternalUserForm({ ...internalUserForm, role: e.target.value })}>
+                  {ROLES.map((r) => (<option key={r.value} value={r.value}>{r.label}</option>))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2 py-1"><input type="checkbox" id="internal_is_lead" checked={internalUserForm.is_lead} onChange={(e) => setInternalUserForm({ ...internalUserForm, is_lead: e.target.checked })} className="rounded border-gray-300 text-primary" /><label htmlFor="internal_is_lead" className="text-xs font-medium">Líder do Time</label></div>
+              <p className="text-[11px] text-muted-foreground">A conta será criada ativa e vinculada diretamente ao time {currentTeam?.name ?? "selecionado"}.</p>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowInternalUserForm(false)}>Cancelar</Button>
+                <Button onClick={submitInternalUser} disabled={internalUserSaving || internalUserForm.password.length < 8} className="px-8">
+                  {internalUserSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cadastrar e vincular"}
                 </Button>
               </div>
             </CardContent>

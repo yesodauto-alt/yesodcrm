@@ -155,9 +155,9 @@ function AIAssistantPage() {
               return (
                 <div
                   key={area.id}
-                  className={`p-6 rounded-xl border-2 transition-all hover:shadow-lg ${area.bg} border-transparent`}
+                  className={`p-6 rounded-xl border-2 transition-all hover:shadow-lg ${area.bg} border-transparent flex h-full flex-col`}
                 >
-                  <button onClick={() => setSelectedArea(area.id)} className="text-left w-full">
+                  <button onClick={() => setSelectedArea(area.id)} className="text-left w-full flex-1">
                     <div className="flex items-center gap-3 mb-3">
                       <div className={`p-2 rounded-lg ${area.bg}`}>
                         <Icon className={`h-6 w-6 ${area.color}`} />

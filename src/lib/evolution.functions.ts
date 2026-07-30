@@ -196,11 +196,20 @@ export const disconnectChannelInstance = createServerFn({ method: "POST" })
 export const sendWhatsAppMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({ number: z.string(), text: z.string(), instance: z.string().optional() }).parse(data),
+    z.object({
+      number: z.string(),
+      text: z.string().trim().min(1).max(4000),
+      instance: z.string().optional(),
+      conversationId: z.string().uuid().optional(),
+    }).parse(data),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const cleanNumber = data.number.replace(/\D/g, "");
-    return evoFetch(`/message/sendText/${data.instance || EVOLUTION_INSTANCE}`, {
+    if (cleanNumber.length < 8 || cleanNumber.length > 15) {
+      throw new Error("Telefone real do contato ainda não foi sincronizado.");
+    }
+    const sentAt = new Date().toISOString();
+    const response = await evoFetch(`/message/sendText/${data.instance || EVOLUTION_INSTANCE}`, {
       method: "POST",
       body: JSON.stringify({
         number: cleanNumber,
@@ -209,5 +218,27 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
         linkPreview: false,
       }),
     });
+    if (data.conversationId) {
+      const externalId = response?.key?.id ?? response?.message?.key?.id ?? crypto.randomUUID();
+      const { data: conversation } = await context.supabase
+        .from("lead_conversations")
+        .select("lead_id")
+        .eq("id", data.conversationId)
+        .maybeSingle();
+      const { error: messageError } = await context.supabase.from("lead_messages").insert({
+        conversation_id: data.conversationId,
+        lead_id: conversation?.lead_id ?? null,
+        external_id: externalId,
+        direction: "out",
+        content: data.text,
+        sender: context.userId,
+        sent_at: sentAt,
+      });
+      if (messageError) throw new Error(messageError.message);
+      await context.supabase
+        .from("lead_conversations")
+        .update({ last_message_at: sentAt })
+        .eq("id", data.conversationId);
+    }
+    return response;
   });
-

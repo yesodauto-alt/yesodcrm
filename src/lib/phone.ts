@@ -4,6 +4,12 @@ export function onlyDigits(value?: string | null) {
   return (value ?? "").replace(/\D/g, "");
 }
 
+/** Retorna apenas telefones plausíveis; IDs internos da Evolution não passam. */
+export function validDisplayPhone(value?: string | null): string | null {
+  const digits = onlyDigits(value);
+  return digits.length >= 8 && digits.length <= 15 ? digits : null;
+}
+
 /** Formata um número em padrão legível (BR quando possível). */
 export function formatPhone(value?: string | null): string {
   const d = onlyDigits(value);

@@ -173,7 +173,18 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
   for (const chat of chats.slice(0, limit)) {
     const jid = jidOf(chat);
     if (!isPersonJid(jid)) continue;
-    const numero = canonicalPhone(chat) ?? phoneByJid.get(jid) ?? null;
+
+    const rawMessages = asArray(
+      await evoPost(`/chat/findMessages/${EVOLUTION_INSTANCE}`, {
+        where: { key: { remoteJid: jid } },
+        limit: 100,
+      }),
+    );
+    const numero =
+      canonicalPhone(chat) ??
+      phoneByJid.get(jid) ??
+      rawMessages.map(canonicalPhone).find(Boolean) ??
+      null;
     if (!numero) {
       result.erros.push(`${jid}: telefone real não informado pela Evolution API`);
       continue;
@@ -216,13 +227,6 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
         existing?.lead_id ?? null,
       );
 
-
-      const rawMessages = asArray(
-        await evoPost(`/chat/findMessages/${EVOLUTION_INSTANCE}`, {
-          where: { key: { remoteJid: jid } },
-          limit: 100,
-        }),
-      );
       const sorted = rawMessages
         .map((m: any) => ({
           external_id: m?.key?.id ?? m?.id ?? null,

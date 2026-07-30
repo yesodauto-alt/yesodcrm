@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listAllConversations, getConversation } from "@/lib/conversations.functions";
 import { syncConversations } from "@/lib/evolution-sync.functions";
+import { sendWhatsAppMessage } from "@/lib/evolution.functions";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,13 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { contactDisplayName, formatPhone, initials } from "@/lib/phone";
+import { contactDisplayName, formatPhone, initials, validDisplayPhone } from "@/lib/phone";
 
-import { MessageSquare, Search, Radio, User, RefreshCw } from "lucide-react";
+import { MessageSquare, Search, Radio, User, RefreshCw, Send } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TEMPERATURA_COLORS, TEMPERATURA_LABELS } from "@/lib/types";
 import { z } from "zod";
+import { toast } from "sonner";
 
 const searchSchema = z.object({ open: z.string().optional() });
 
@@ -30,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/conversations")({
 function ConversationsPage() {
   const nav = Route.useNavigate();
   const { open } = Route.useSearch();
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(open ?? null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [syncing, setSyncing] = useState(false);
@@ -119,13 +122,16 @@ function ConversationsPage() {
       <div className="grid gap-2">
         {(data ?? []).map((c: any) => {
           const nome = contactDisplayName(c.contacts?.nome, c.leads?.nome);
-          const numero = c.numero ?? c.contacts?.whatsapp ?? c.leads?.whatsapp;
+          const numero = validDisplayPhone(c.numero ?? c.contacts?.whatsapp ?? c.leads?.whatsapp);
           const avatar = c.contacts?.avatar_url ?? c.leads?.avatar_url ?? null;
           return (
           <Card
             key={c.id}
             className="p-3 cursor-pointer hover:bg-muted/40 transition-colors"
-            onClick={() => nav({ search: { open: c.id } })}
+            onClick={() => {
+              setSelectedConversation(c.id);
+              nav({ search: { open: c.id } });
+            }}
           >
             <div className="flex items-start gap-3 flex-wrap">
               <Avatar className="h-10 w-10">
@@ -168,13 +174,22 @@ function ConversationsPage() {
           </Card>
         )}
       </div>
-      <ConversationDrawer id={open ?? null} onClose={() => nav({ search: {} })} />
+      <ConversationDrawer
+        id={selectedConversation ?? open ?? null}
+        onClose={() => {
+          setSelectedConversation(null);
+          nav({ search: {} });
+        }}
+      />
     </div>
   );
 }
 
 function ConversationDrawer({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const qc = useQueryClient();
   const get = useServerFn(getConversation);
+  const sendMessage = useServerFn(sendWhatsAppMessage);
+  const [text, setText] = useState("");
   const { data } = useQuery({
     queryKey: ["conversation", id],
     queryFn: () => get({ data: { id: id! } }),
@@ -183,6 +198,29 @@ function ConversationDrawer({ id, onClose }: { id: string | null; onClose: () =>
   });
   const conv = data?.conversation as any;
   const messages = data?.messages ?? [];
+  const number = validDisplayPhone(conv?.numero ?? conv?.contacts?.whatsapp ?? conv?.leads?.whatsapp);
+  const sendMut = useMutation({
+    mutationFn: () =>
+      sendMessage({
+        data: {
+          number: number!,
+          text: text.trim(),
+          conversationId: id!,
+        },
+      }),
+    onSuccess: async () => {
+      setText("");
+      await qc.invalidateQueries({ queryKey: ["conversation", id] });
+      await qc.invalidateQueries({ queryKey: ["conversations-all"] });
+    },
+    onError: (error: any) => toast.error(error?.message ?? "Não foi possível enviar a mensagem."),
+  });
+
+  function submitMessage() {
+    if (!id || !number || !text.trim() || sendMut.isPending) return;
+    sendMut.mutate();
+  }
+
   return (
     <Sheet open={!!id} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full sm:max-w-xl flex flex-col p-0">
@@ -198,9 +236,9 @@ function ConversationDrawer({ id, onClose }: { id: string | null; onClose: () =>
             </Avatar>
             <span className="flex flex-col text-left">
               <span>{contactDisplayName(conv?.contacts?.nome, conv?.leads?.nome)}</span>
-              {conv?.numero && (
+              {number && (
                 <span className="text-xs font-normal text-muted-foreground">
-                  {formatPhone(conv.numero)}
+                  {formatPhone(number)}
                 </span>
               )}
             </span>
@@ -238,6 +276,30 @@ function ConversationDrawer({ id, onClose }: { id: string | null; onClose: () =>
               </div>
             </div>
           ))}
+        </div>
+        <div className="border-t bg-background p-3">
+          <div className="flex items-center gap-2">
+            <Input
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  submitMessage();
+                }
+              }}
+              placeholder={number ? "Digite uma mensagem..." : "Sincronize o telefone real para responder"}
+              disabled={!number || sendMut.isPending}
+            />
+            <Button
+              size="icon"
+              onClick={submitMessage}
+              disabled={!number || !text.trim() || sendMut.isPending}
+              aria-label="Enviar mensagem"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
