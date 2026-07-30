@@ -8,6 +8,7 @@ import {
   EVOLUTION_INSTANCE,
   EVOLUTION_PUBLIC_URL,
   isPersonJid,
+  isCrediblePhone,
   jidOf,
   lidJids,
   messageContent,
@@ -82,9 +83,12 @@ Deno.serve(async (req: Request) => {
       .select('canonical_phone, phone_jid, lid_jid, display_name')
       .eq('channel_id', channel.id)
     for (const identity of savedIdentities ?? []) {
-      if (identity.phone_jid) identityByJid.set(identity.phone_jid, identity.canonical_phone)
-      if (identity.lid_jid) identityByJid.set(identity.lid_jid, identity.canonical_phone)
-      if (identity.display_name) nameByPhone.set(identity.canonical_phone, identity.display_name)
+      // Ignora identidades antigas contaminadas por IDs internos curtos.
+      if (isCrediblePhone(identity.canonical_phone)) {
+        if (identity.phone_jid) identityByJid.set(identity.phone_jid, identity.canonical_phone)
+        if (identity.lid_jid) identityByJid.set(identity.lid_jid, identity.canonical_phone)
+        if (identity.display_name) nameByPhone.set(identity.canonical_phone, identity.display_name)
+      }
       identityRows.set(identity.canonical_phone, { ...identity, channel_id: channel.id })
     }
 
@@ -127,7 +131,7 @@ Deno.serve(async (req: Request) => {
         if (error) throw error
       }
     } catch (error) {
-      result.erros.push(`Contatos: ${error instanceof Error ? error.message : 'falha'}`)
+      result.erros.push(`Contatos: ${errorMessage(error)}`)
     }
 
     const chats = asArray(
@@ -156,8 +160,11 @@ Deno.serve(async (req: Request) => {
           ),
         )
 
-        const phone = canonicalPhone(chat) ?? identityByJid.get(jid) ??
-          rawMessages.map(canonicalPhone).find(Boolean) ?? null
+        // Prefere evidência atual da Evolution; o cache vem por último para não
+        // reutilizar vínculos LID → ID interno produzidos por versões antigas.
+        const phone = canonicalPhone(chat) ??
+          rawMessages.map(canonicalPhone).find(isCrediblePhone) ??
+          identityByJid.get(jid) ?? null
         if (!phone) {
           result.erros.push(`${jid}: telefone real não fornecido pela Evolution`)
           continue
@@ -245,8 +252,12 @@ Deno.serve(async (req: Request) => {
           result.conversasImportadas += 1
         }
 
-        const { data: known } = await db.from('lead_messages').select('external_id')
-          .eq('conversation_id', conversationId)
+        const messageIds = messages.map((message) => message.external_id)
+        const knownQuery = messageIds.length
+          ? await db.from('lead_messages').select('external_id').in('external_id', messageIds)
+          : { data: [], error: null }
+        if (knownQuery.error) throw knownQuery.error
+        const known = knownQuery.data
         const knownIds = new Set((known ?? []).map((row) => row.external_id))
         const missing = messages.filter((message) => !knownIds.has(message.external_id))
           .map((message) => ({
@@ -256,12 +267,12 @@ Deno.serve(async (req: Request) => {
           }))
         if (missing.length) {
           const { error } = await db.from('lead_messages')
-            .upsert(missing, { onConflict: 'external_id', ignoreDuplicates: true })
+            .insert(missing)
           if (error) throw error
           result.mensagensSincronizadas += missing.length
         }
       } catch (error) {
-        result.erros.push(`${jid}: ${error instanceof Error ? error.message : 'falha'}`)
+        result.erros.push(`${jid}: ${errorMessage(error)}`)
       }
     }
 
@@ -280,12 +291,12 @@ Deno.serve(async (req: Request) => {
         last_sync_at: new Date().toISOString(),
       }).eq('id', channel.id)
     } catch (error) {
-      result.erros.push(`Webhook: ${error instanceof Error ? error.message : 'falha'}`)
+      result.erros.push(`Webhook: ${errorMessage(error)}`)
     }
 
     return json(result)
   } catch (error) {
-    result.erros.push(error instanceof Error ? error.message : 'Falha na sincronização.')
+    result.erros.push(errorMessage(error))
     return json(result, 400)
   }
 })
@@ -386,4 +397,15 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object') {
+    const value = error as Record<string, unknown>
+    return [value.message, value.details, value.hint, value.code]
+      .filter((part) => typeof part === 'string' && part.trim())
+      .join(' · ') || JSON.stringify(value).slice(0, 500)
+  }
+  return String(error || 'Falha desconhecida.')
 }

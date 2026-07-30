@@ -26,26 +26,38 @@ function digits(value: unknown): string {
   return String(value ?? '').replace(/\D/g, '')
 }
 
-function explicitPhone(value: unknown): string | null {
+function explicitPhone(value: unknown, allowPlainNumber = false): string | null {
   if (typeof value !== 'string' && typeof value !== 'number') return null
   const raw = String(value)
   if (raw.includes('@lid') || raw.includes('@g.us') || raw.includes('broadcast')) return null
   const number = digits(raw.split('@')[0])
   const explicitJid = raw.includes('@s.whatsapp.net') || raw.includes('@c.us')
-  const explicitPn = !raw.includes('@') && number.length >= 8 && number.length <= 13
+  const explicitPn = allowPlainNumber && !raw.includes('@') &&
+    number.length >= 8 && number.length <= 15
   return explicitJid || explicitPn ? number : null
 }
 
 export function canonicalPhone(row: any): string | null {
-  const candidates = [
+  // Estes campos são definidos pelo provedor como números de telefone e podem
+  // chegar sem o sufixo de JID.
+  const phoneCandidates = [
     row?.senderPn,
     row?.participantPn,
-    row?.sender,
     row?.key?.senderPn,
     row?.key?.participantPn,
     row?.phoneNumber,
     row?.phone,
     row?.wa_id,
+  ]
+  for (const candidate of phoneCandidates) {
+    const phone = explicitPhone(candidate, true)
+    if (phone) return phone
+  }
+
+  // IDs genéricos (especialmente row.id) podem ser chaves numéricas internas
+  // da Evolution. Só são telefones quando possuem um sufixo de JID telefônico.
+  const jidCandidates = [
+    row?.sender,
     row?.remoteJidAlt,
     row?.key?.remoteJidAlt,
     row?.remoteJid,
@@ -53,11 +65,15 @@ export function canonicalPhone(row: any): string | null {
     row?.id,
     row?.key?.remoteJid,
   ]
-  for (const candidate of candidates) {
+  for (const candidate of jidCandidates) {
     const phone = explicitPhone(candidate)
     if (phone) return phone
   }
   return null
+}
+
+export function isCrediblePhone(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{11,15}$/.test(value)
 }
 
 export function lidJids(row: any): string[] {
