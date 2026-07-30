@@ -39,7 +39,13 @@ async function evoPost(path: string, body: unknown) {
     const cause = lastError instanceof Error ? lastError.message : "falha de conexão";
     throw new Error(`Evolution API indisponível em ${path}: ${cause}`);
   }
-  const text = await res.text();
+  let text = "";
+  try {
+    text = await res.text();
+  } catch (error) {
+    const cause = error instanceof Error ? error.message : "falha ao ler resposta";
+    throw new Error(`Evolution API indisponível em ${path}: ${cause}`);
+  }
   let parsed: any = null;
   try {
     parsed = text ? JSON.parse(text) : null;
