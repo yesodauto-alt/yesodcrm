@@ -2,8 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listAllConversations, getConversation } from "@/lib/conversations.functions";
-import { syncConversations } from "@/lib/evolution-sync.functions";
-import { sendWhatsAppMessage } from "@/lib/evolution.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,7 +37,6 @@ function ConversationsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const list = useServerFn(listAllConversations);
-  const sync = useServerFn(syncConversations);
   const { data, refetch } = useQuery({
     queryKey: ["conversations-all", { search, status }],
     queryFn: () => list({ data: { search, status } }),
@@ -49,7 +47,11 @@ function ConversationsPage() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const r = await sync({ data: { limit: 50 } });
+      const { data: r, error } = await supabase.functions.invoke("evolution-sync-crm", {
+        body: { limit: 50 },
+      });
+      if (error) throw error;
+      if (!r) throw new Error("A sincronização não retornou resultado.");
       const partes = [
         `${r.contatosEncontrados} contatos encontrados`,
         `${r.contatosCriados} contatos criados`,
@@ -188,7 +190,6 @@ function ConversationsPage() {
 function ConversationDrawer({ id, onClose }: { id: string | null; onClose: () => void }) {
   const qc = useQueryClient();
   const get = useServerFn(getConversation);
-  const sendMessage = useServerFn(sendWhatsAppMessage);
   const [text, setText] = useState("");
   const { data } = useQuery({
     queryKey: ["conversation", id],
@@ -200,14 +201,18 @@ function ConversationDrawer({ id, onClose }: { id: string | null; onClose: () =>
   const messages = data?.messages ?? [];
   const number = validDisplayPhone(conv?.numero ?? conv?.contacts?.whatsapp ?? conv?.leads?.whatsapp);
   const sendMut = useMutation({
-    mutationFn: () =>
-      sendMessage({
-        data: {
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("evolution-send-message-crm", {
+        body: {
           number: number!,
           text: text.trim(),
           conversationId: id!,
         },
-      }),
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
     onSuccess: async () => {
       setText("");
       await qc.invalidateQueries({ queryKey: ["conversation", id] });
