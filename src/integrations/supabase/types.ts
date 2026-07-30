@@ -507,6 +507,47 @@ export type Database = {
           },
         ]
       }
+      evolution_contact_identity: {
+        Row: {
+          canonical_phone: string
+          channel_id: string
+          created_at: string
+          display_name: string | null
+          id: string
+          lid_jid: string | null
+          phone_jid: string | null
+          updated_at: string
+        }
+        Insert: {
+          canonical_phone: string
+          channel_id: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          lid_jid?: string | null
+          phone_jid?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canonical_phone?: string
+          channel_id?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          lid_jid?: string | null
+          phone_jid?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evolution_contact_identity_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_conversations: {
         Row: {
           assigned_user_id: string | null
