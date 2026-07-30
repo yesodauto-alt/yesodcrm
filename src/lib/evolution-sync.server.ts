@@ -1,4 +1,4 @@
-import { EVOLUTION_INSTANCE } from "@/lib/evolution-shared";
+import { EVOLUTION_INSTANCE, EVOLUTION_PUBLIC_URL } from "@/lib/evolution-shared";
 
 export type SyncResult = {
   contatosEncontrados: number;
@@ -19,21 +19,27 @@ function normalizeBaseUrl(raw: string) {
 async function evoPost(path: string, body: unknown) {
   const rawUrl = process.env.EVOLUTION_API_URL;
   const key = process.env.EVOLUTION_API_KEY;
-  if (!rawUrl || !key) throw new Error("Evolution API não configurada.");
+  if (!key) throw new Error("Chave da Evolution API não configurada.");
+  const urls = Array.from(
+    new Set([rawUrl, EVOLUTION_PUBLIC_URL].filter(Boolean).map((url) => normalizeBaseUrl(url!))),
+  );
   let res: Response | null = null;
   let lastError: unknown = null;
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    try {
-      res = await fetch(`${normalizeBaseUrl(rawUrl)}${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: key },
-        body: JSON.stringify(body ?? {}),
-        signal: AbortSignal.timeout(20_000),
-      });
-      break;
-    } catch (error) {
-      lastError = error;
+  for (const url of urls) {
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        res = await fetch(`${url}${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: key },
+          body: JSON.stringify(body ?? {}),
+          signal: AbortSignal.timeout(20_000),
+        });
+        break;
+      } catch (error) {
+        lastError = error;
+      }
     }
+    if (res) break;
   }
   if (!res) {
     const cause = lastError instanceof Error ? lastError.message : "falha de conexão";
