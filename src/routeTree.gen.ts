@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -27,6 +28,9 @@ import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedChannelsRouteImport } from './routes/_authenticated/channels'
 import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenticated/automations'
 import { Route as AuthenticatedAiAssistantRouteImport } from './routes/_authenticated/ai-assistant'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicLeadsIndexRouteImport } from './routes/api/public/leads/index'
 import { Route as ApiPublicConversationsIndexRouteImport } from './routes/api/public/conversations/index'
@@ -45,6 +49,11 @@ import { Route as ApiPublicLeadsIdStatusRouteImport } from './routes/api/public/
 import { Route as ApiPublicLeadsIdNoteRouteImport } from './routes/api/public/leads/$id/note'
 import { Route as ApiPublicConversationsIdMessagesRouteImport } from './routes/api/public/conversations/$id/messages'
 
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -136,6 +145,24 @@ const AuthenticatedAiAssistantRoute =
     id: '/ai-assistant',
     path: '/ai-assistant',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
@@ -238,6 +265,9 @@ const ApiPublicConversationsIdMessagesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ai-assistant': typeof AuthenticatedAiAssistantRoute
   '/automations': typeof AuthenticatedAutomationsRoute
   '/channels': typeof AuthenticatedChannelsRoute
@@ -254,6 +284,7 @@ export interface FileRoutesByFullPath {
   '/teams': typeof AuthenticatedTeamsRoute
   '/templates': typeof AuthenticatedTemplatesRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
   '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
@@ -274,6 +305,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ai-assistant': typeof AuthenticatedAiAssistantRoute
   '/automations': typeof AuthenticatedAutomationsRoute
   '/channels': typeof AuthenticatedChannelsRoute
@@ -290,6 +324,7 @@ export interface FileRoutesByTo {
   '/teams': typeof AuthenticatedTeamsRoute
   '/templates': typeof AuthenticatedTemplatesRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
   '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
@@ -312,6 +347,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/ai-assistant': typeof AuthenticatedAiAssistantRoute
   '/_authenticated/automations': typeof AuthenticatedAutomationsRoute
   '/_authenticated/channels': typeof AuthenticatedChannelsRoute
@@ -328,6 +366,7 @@ export interface FileRoutesById {
   '/_authenticated/teams': typeof AuthenticatedTeamsRoute
   '/_authenticated/templates': typeof AuthenticatedTemplatesRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/webhooks/ai-analysis': typeof ApiPublicWebhooksAiAnalysisRoute
   '/api/public/webhooks/channel-status': typeof ApiPublicWebhooksChannelStatusRoute
   '/api/public/webhooks/new-contact': typeof ApiPublicWebhooksNewContactRoute
@@ -350,6 +389,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/mcp'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/ai-assistant'
     | '/automations'
     | '/channels'
@@ -366,6 +408,7 @@ export interface FileRouteTypes {
     | '/teams'
     | '/templates'
     | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/public/webhooks/ai-analysis'
     | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
@@ -386,6 +429,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/mcp'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/ai-assistant'
     | '/automations'
     | '/channels'
@@ -402,6 +448,7 @@ export interface FileRouteTypes {
     | '/teams'
     | '/templates'
     | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/public/webhooks/ai-analysis'
     | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
@@ -423,6 +470,9 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/mcp'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/ai-assistant'
     | '/_authenticated/automations'
     | '/_authenticated/channels'
@@ -439,6 +489,7 @@ export interface FileRouteTypes {
     | '/_authenticated/teams'
     | '/_authenticated/templates'
     | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/public/webhooks/ai-analysis'
     | '/api/public/webhooks/channel-status'
     | '/api/public/webhooks/new-contact'
@@ -461,7 +512,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  McpRoute: typeof McpRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicWebhooksAiAnalysisRoute: typeof ApiPublicWebhooksAiAnalysisRoute
   ApiPublicWebhooksChannelStatusRoute: typeof ApiPublicWebhooksChannelStatusRoute
   ApiPublicWebhooksNewContactRoute: typeof ApiPublicWebhooksNewContactRoute
@@ -482,6 +537,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -607,6 +669,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/ai-assistant'
       preLoaderRoute: typeof AuthenticatedAiAssistantRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
       id: '/.lovable/oauth/consent'
@@ -773,7 +856,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  McpRoute: McpRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicWebhooksAiAnalysisRoute: ApiPublicWebhooksAiAnalysisRoute,
   ApiPublicWebhooksChannelStatusRoute: ApiPublicWebhooksChannelStatusRoute,
   ApiPublicWebhooksNewContactRoute: ApiPublicWebhooksNewContactRoute,

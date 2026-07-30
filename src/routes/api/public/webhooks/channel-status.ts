@@ -10,7 +10,7 @@ const schema = z.object({
     .object({
       tipo: z.string(),
       descricao: z.string().optional(),
-      metadata: z.record(z.any()).optional(),
+      metadata: z.record(z.string(), z.any()).optional(),
     })
     .optional(),
 });
