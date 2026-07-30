@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { EVOLUTION_PUBLIC_URL } from "@/lib/evolution-shared";
 
 /** Nome fixo da instância usada pelo CRM. */
 export const EVOLUTION_INSTANCE = "yesodcrm";
@@ -16,25 +17,32 @@ function normalizeBaseUrl(raw: string) {
 function evolutionConfig() {
   const rawUrl = process.env.EVOLUTION_API_URL;
   const key = process.env.EVOLUTION_API_KEY;
-  if (!rawUrl || !key) {
-    throw new Error(
-      "Evolution API não configurada. Cadastre EVOLUTION_API_URL e EVOLUTION_API_KEY.",
-    );
-  }
-  return { url: normalizeBaseUrl(rawUrl), key };
+  if (!key) throw new Error("Evolution API não configurada. Cadastre EVOLUTION_API_KEY.");
+  const urls = Array.from(
+    new Set([rawUrl, EVOLUTION_PUBLIC_URL].filter(Boolean).map((url) => normalizeBaseUrl(url!))),
+  );
+  return { urls, key };
 }
 
 async function evoFetch(path: string, init?: RequestInit) {
-  const { url, key } = evolutionConfig();
-  let res: Response;
-  try {
-    res = await fetch(`${url}${path}`, {
-      ...init,
-      headers: { "Content-Type": "application/json", apikey: key, ...(init?.headers ?? {}) },
-    });
-  } catch (e) {
+  const { urls, key } = evolutionConfig();
+  let res: Response | null = null;
+  let lastError: unknown = null;
+  for (const url of urls) {
+    try {
+      res = await fetch(`${url}${path}`, {
+        ...init,
+        headers: { "Content-Type": "application/json", apikey: key, ...(init?.headers ?? {}) },
+        signal: init?.signal ?? AbortSignal.timeout(20_000),
+      });
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (!res) {
     throw new Error(
-      `Não foi possível contatar a Evolution API em ${url} (${e instanceof Error ? e.message : "erro de rede"}).`,
+      `Não foi possível contatar a Evolution API (${lastError instanceof Error ? lastError.message : "erro de rede"}).`,
     );
   }
   const text = await res.text();
