@@ -13,18 +13,32 @@ export type SyncResult = {
 function normalizeBaseUrl(raw: string) {
   let url = raw.trim().replace(/\/+$/, "");
   if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
-  return url.replace(/^http:\/\//i, "https://");
+  return url;
 }
 
 async function evoPost(path: string, body: unknown) {
   const rawUrl = process.env.EVOLUTION_API_URL;
   const key = process.env.EVOLUTION_API_KEY;
   if (!rawUrl || !key) throw new Error("Evolution API não configurada.");
-  const res = await fetch(`${normalizeBaseUrl(rawUrl)}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: key },
-    body: JSON.stringify(body ?? {}),
-  });
+  let res: Response | null = null;
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      res = await fetch(`${normalizeBaseUrl(rawUrl)}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: key },
+        body: JSON.stringify(body ?? {}),
+        signal: AbortSignal.timeout(20_000),
+      });
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (!res) {
+    const cause = lastError instanceof Error ? lastError.message : "falha de conexão";
+    throw new Error(`Evolution API indisponível em ${path}: ${cause}`);
+  }
   const text = await res.text();
   let parsed: any = null;
   try {
@@ -204,31 +218,37 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
     result.erros.push(`Contatos da Evolution: ${e.message}`);
   }
 
-  const chats = asArray(await evoPost(`/chat/findChats/${EVOLUTION_INSTANCE}`, {}));
+  let chats: any[] = [];
+  try {
+    chats = asArray(await evoPost(`/chat/findChats/${EVOLUTION_INSTANCE}`, {}));
+  } catch (e: any) {
+    result.erros.push(`Conversas da Evolution: ${e?.message ?? "falha de conexão"}`);
+    return result;
+  }
 
   for (const chat of chats.slice(0, limit)) {
     const jid = jidOf(chat);
     if (!isPersonJid(jid)) continue;
 
-    const rawMessages = asArray(
-      await evoPost(`/chat/findMessages/${EVOLUTION_INSTANCE}`, {
-        where: { key: { remoteJid: jid } },
-        limit: 100,
-      }),
-    );
-    const numero =
-      canonicalPhone(chat) ??
-      phoneByJid.get(jid) ??
-      rawMessages.map((message) => phoneByJid.get(jidOf(message) ?? "")).find(Boolean) ??
-      rawMessages.map(canonicalPhone).find(Boolean) ??
-      null;
-    if (!numero) {
-      result.erros.push(`${jid}: telefone real não informado pela Evolution API`);
-      continue;
-    }
-    result.contatosEncontrados += 1;
-
     try {
+      const rawMessages = asArray(
+        await evoPost(`/chat/findMessages/${EVOLUTION_INSTANCE}`, {
+          where: { key: { remoteJid: jid } },
+          limit: 100,
+        }),
+      );
+      const numero =
+        canonicalPhone(chat) ??
+        phoneByJid.get(jid) ??
+        rawMessages.map((message) => phoneByJid.get(jidOf(message) ?? "")).find(Boolean) ??
+        rawMessages.map(canonicalPhone).find(Boolean) ??
+        null;
+      if (!numero) {
+        result.erros.push(`${jid}: telefone real não informado pela Evolution API`);
+        continue;
+      }
+      result.contatosEncontrados += 1;
+
       const nomeReal =
         chat?.pushName ?? chat?.name ?? chat?.verifiedName ?? nameByNumber.get(numero) ?? null;
       
@@ -331,7 +351,7 @@ export async function runConversationSync(limit: number): Promise<SyncResult> {
         result.mensagensSincronizadas += toInsert.length;
       }
     } catch (e: any) {
-      result.erros.push(`${numero}: ${e?.message ?? "erro desconhecido"}`);
+      result.erros.push(`${jid}: ${e?.message ?? "erro desconhecido"}`);
     }
   }
 
