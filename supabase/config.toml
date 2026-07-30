@@ -1,1 +1,10 @@
-m«ë
+project_id = "tkhiqdekaikxfgrluwxw"
+
+[functions.evolution-webhook-crm]
+verify_jwt = false
+
+[functions.evolution-sync-crm]
+verify_jwt = true
+
+[functions.evolution-send-message-crm]
+verify_jwt = true
